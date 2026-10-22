@@ -35,6 +35,7 @@
 #include "audio_prompts.h"
 #include "audio_voice.h"
 #include "buddy_config.h"
+#include "buddy_console.h"
 #include "buddy_selftest.h"
 #include "buddy_settings.h"
 #include "buddy_timer.h"
@@ -212,6 +213,12 @@ void app_main(void)
       * which is far more useful than guessing why something is not working.
       */
     buddy_selftest_run_and_log();
+
+    /*
+     * Last, so every command it can run has something to talk to. Not fatal:
+     * the box works the same without it, it just cannot be typed at.
+     */
+    buddy_console_start();
 
     log_memory_summary();
     ESP_LOGI(TAG, "Ready. Say \"Hi E.S.P.\" to start talking.");

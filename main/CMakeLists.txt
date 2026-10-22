@@ -16,6 +16,7 @@ idf_component_register(
         "core/buddy_timer.c"
         "core/buddy_presence.c"
         "core/buddy_selftest.c"
+        "core/buddy_console.c"
 
         # Talking to the hardware
         "hardware/hw_display.c"

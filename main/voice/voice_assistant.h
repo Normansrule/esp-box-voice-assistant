@@ -71,6 +71,20 @@ uint16_t voice_assistant_requests_remaining(void);
  */
 bool voice_assistant_spend_request(void);
 
+/**
+ * @brief Answer a phrase as though it had just been heard.
+ *
+ * For the serial console (core/buddy_console.c): it is handed to the
+ * assistant's worker task and answered exactly like a spoken command, minus
+ * the wake word. Only actions from the vocabulary table can arrive this way.
+ *
+ * @param action  What the phrase means.
+ * @param phrase  Its text, for the caption. Must outlive the call; pass the
+ *                phrase from the vocabulary table, which is constant.
+ * @return false when the worker's queue is full or not started yet.
+ */
+bool voice_assistant_handle_typed_command(voice_action_t action, const char *phrase);
+
 #ifdef __cplusplus
 }
 #endif

@@ -121,6 +121,13 @@ bool voice_assistant_spend_request(void)
 /** What the worker can be asked to do. */
 typedef enum {
     ASSISTANT_JOB_TIMER_EXPIRED = 0,   /*!< The kitchen timer reached zero   */
+    ASSISTANT_JOB_TYPED_COMMAND,       /*!< A phrase sent over the console   */
+} assistant_job_kind_t;
+
+typedef struct {
+    assistant_job_kind_t kind;
+    voice_action_t       action;       /*!< ASSISTANT_JOB_TYPED_COMMAND only */
+    const char          *phrase;       /*!< Points into the vocabulary table */
 } assistant_job_t;
 
 static QueueHandle_t s_job_queue;
@@ -800,11 +807,22 @@ static void announce_timer_expired(void)
  */
 static void timer_expired(void)
 {
-    const assistant_job_t job = ASSISTANT_JOB_TIMER_EXPIRED;
+    const assistant_job_t job = { .kind = ASSISTANT_JOB_TIMER_EXPIRED };
 
     if (s_job_queue == NULL || xQueueSend(s_job_queue, &job, 0) != pdTRUE) {
         ESP_LOGW(TAG, "Could not queue the timer announcement");
     }
+}
+
+bool voice_assistant_handle_typed_command(voice_action_t action, const char *phrase)
+{
+    const assistant_job_t job = {
+        .kind   = ASSISTANT_JOB_TYPED_COMMAND,
+        .action = action,
+        .phrase = phrase,
+    };
+
+    return s_job_queue != NULL && xQueueSend(s_job_queue, &job, 0) == pdTRUE;
 }
 
 /**
@@ -1026,10 +1044,25 @@ static void assistant_worker_task(void *argument)
         assistant_job_t job;
 
         if (xQueueReceive(s_job_queue, &job, pdMS_TO_TICKS(WATCHDOG_TICK_MS)) == pdTRUE) {
-            switch (job) {
+            switch (job.kind) {
             case ASSISTANT_JOB_TIMER_EXPIRED:
                 announce_timer_expired();
                 break;
+            case ASSISTANT_JOB_TYPED_COMMAND: {
+                /*
+                 * The same handler the microphone path uses, so a typed phrase
+                 * gets the same caption, face, reply and music handling. It
+                 * blocks for the length of any chime, which is what this task
+                 * is for.
+                 */
+                const voice_event_t event = {
+                    .type   = VOICE_EVENT_COMMAND_MATCHED,
+                    .action = job.action,
+                    .phrase = job.phrase,
+                };
+                handle_recognised_command(&event);
+                break;
+            }
             default:
                 break;
             }
