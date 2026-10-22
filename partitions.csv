@@ -1,0 +1,36 @@
+# Flash layout for a 16 MB ESP32-S3-BOX-3.
+#
+# Name,   Type, SubType, Offset,  Size, Flags
+#
+# storage  holds the SPIFFS image built from ../spiffs: the chimes and your
+#          music. Every .mp3 you add has to fit inside it.
+# model    holds the wake word and command recognition neural networks. Its
+#          size is dictated by which models are selected in menuconfig; shrink
+#          it only if you also drop a language.
+#
+# REBALANCED IN v3.5. The note below used to say "if you want more room for
+# music, take it from ota_0" — so that is what has been done.
+#
+# ota_0 went from 4200K to 3600K. The application built at 1.35 MB with every
+# feature in it, so even after the change there is more than two and a half
+# times the room it needs. The 4200K was inherited from the factory demo, which
+# included ESP RainMaker; this firmware does not.
+#
+# storage went from 3456K to 4056K, and needed it: the offline voice is now 351
+# recordings and the music is two full pieces. At the old size the image was at
+# 87 percent, which is past where SPIFFS wants to be — it needs free blocks to
+# write into, and a nearly-full filesystem gets slow and then fails.
+#
+# The 16 MB chip is completely full, so these two numbers have to move together.
+# nvs sits BEFORE ota_0 at a fixed offset, so none of this disturbs saved
+# settings or Wi-Fi credentials. The model partition does move, which means a
+# full `idf.py flash` rather than `app-flash` after changing this file.
+
+sec_cert, data, ,        0xd000,  0x3000,
+nvs,      data, nvs,     0x10000, 0x6000,
+otadata,  data, ota,     ,        0x2000,
+phy_init, data, phy,     ,        0x1000,
+fctry,    data, nvs,     ,        0x6000,
+ota_0,    app,  ota_0,   ,        3600K,
+storage,  data, spiffs,  ,        4056K,
+model,    data, spiffs,  ,        8600K,

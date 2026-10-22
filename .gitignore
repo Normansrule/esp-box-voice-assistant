@@ -1,0 +1,32 @@
+# ESP-IDF build output and generated config
+build/
+build_*/
+sdkconfig
+sdkconfig.old
+managed_components/
+
+# Site build
+_site/
+
+# SECRETS: never commit these
+spiffs/openai_key.txt
+*.key
+*.pem
+secrets.*
+.env
+.env.*
+wifi_credentials*
+
+# Recordings and captures (privacy)
+*.wav.rec
+recordings/
+captures/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+tests/build/

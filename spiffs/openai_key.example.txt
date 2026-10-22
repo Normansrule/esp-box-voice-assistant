@@ -1,0 +1,5 @@
+PASTE-YOUR-OPENAI-PROJECT-KEY-ON-THIS-LINE
+Copy this file to spiffs/openai_key.txt, replace the first line with your key
+(starts "sk-"), and rebuild. Only the first line is read.
+spiffs/openai_key.txt is git-ignored. Never commit it.
+The online brain stays OFF until you switch it on in Settings.

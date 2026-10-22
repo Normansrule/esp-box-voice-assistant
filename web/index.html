@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESP-BOX Voice</title>
+<meta name="description" content="An offline-first voice assistant with a face, for the ESP32-S3-BOX-3. Interactive simulator of the Desk Buddy firmware UI.">
+<meta name="theme-color" content="#E8362D">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="ESP-BOX Voice, top of page">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#E8362D"/><rect x="6.2" y="7" width="3.6" height="5.2" rx="1.6" fill="#fff"/><rect x="14.2" y="7" width="3.6" height="5.2" rx="1.6" fill="#fff"/><path d="M7.5 15.5q4.5 3 9 0" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      ESP-BOX Voice
+    </a>
+    <div class="nav-links">
+      <a href="#faces">Faces</a>
+      <a href="#listen">Voice</a>
+      <a href="#simulator">Simulator</a>
+      <a href="#status">Status</a>
+      <a href="https://github.com/Normansrule/esp-box-voice-assistant">GitHub</a>
+    </div>
+    <span class="sim-pill" title="Everything on this page runs in your browser. Nothing here is read from a device.">Simulation</span>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow fade-up">ESP32-S3-BOX-3 &middot; Desk Buddy firmware <span data-fw="version"></span></p>
+      <h1 class="display"><span>Hi</span> <span class="grad">E.S.P.</span></h1>
+      <p class="sub fade-up" style="margin-top:22px">A voice assistant with a face. It hears its wake word on the chip, answers <span data-count="commands"></span> phrases offline, and only asks the cloud when you let it.</p>
+      <div class="btns fade-up">
+        <a class="btn btn-red" href="#simulator">Try the simulator</a>
+        <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
+      </div>
+    </div>
+    <div class="stage" id="hero-stage">
+      <div class="fallback-device"><canvas id="hero-fallback" width="640" height="480" aria-hidden="true"></canvas></div>
+      <p class="stage-note">Rendered in your browser from the firmware's face tables. Drag to turn.</p>
+    </div>
+  </div>
+  <div class="scroll-cue" aria-hidden="true">Scroll<i></i></div>
+</header>
+
+<section id="faces" class="morph" aria-label="Expressions">
+  <div class="morph-sticky wrap">
+    <div class="morph-copy">
+      <p class="eyebrow">No bitmaps. Just numbers.</p>
+      <h2 class="headline"><span data-count="emotions"></span> faces from <br>21 numbers.</h2>
+      <p class="sub">Every expression is one row in <code>face_emotions.c</code>. Moving between two is arithmetic, so one tween animates them all.</p>
+      <div class="pose-table" id="pose-table" aria-live="off"></div>
+      <div class="progress-rail"><i id="morph-progress"></i></div>
+    </div>
+    <div>
+      <div class="morph-name" id="morph-name">neutral</div>
+      <div class="morph-screen" style="margin-top:18px"><canvas id="morph-canvas" width="640" height="480" role="img" aria-label="The buddy's face, changing expression as you scroll"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<section id="listen" class="night pad">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">How it listens</p>
+      <h2 class="headline">Wake. Listen.<br><span class="grad">Answer.</span></h2>
+      <p class="sub">Each stage below is a real branch in <code>voice_assistant.c</code>, drawn with the face the firmware shows at that moment. Click one to play it in the simulator.</p>
+    </div>
+    <div class="pipeline" id="pipeline"></div>
+    <div class="branch reveal">
+      <div class="note"><span class="chip red">On the chip</span><b>ESP-SR WakeNet + MultiNet.</b> The wake word and every offline phrase are recognised on the ESP32-S3. No network, no delay, no cost. The mute switch stops capture at the microphone driver.</div>
+      <div class="note"><span class="chip">Optional, off by default</span><b>Online brain.</b> Unrecognised questions can go to OpenAI for speech-to-text, an answer and a voice. It needs Wi-Fi, your own API key, and a switch you turn on. An hourly limit caps the bill.</div>
+    </div>
+  </div>
+</section>
+
+<section id="simulator" class="pad">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Interactive simulator</p>
+      <h2 class="headline">Talk to it.</h2>
+      <p class="sub">Press the wake button, pick a phrase, and the buddy answers with its real reply table and its real offline voice clips. Tap the screen to poke it. Tap the gear for Settings.</p>
+    </div>
+
+    <div class="sim">
+      <div class="device-col">
+        <div class="device" id="device">
+          <button class="mute-switch" id="mute" aria-pressed="false" aria-label="Mute switch (microphone)" title="Mute switch: stops the microphone"></button>
+          <span class="device-mic l" aria-hidden="true"></span><span class="device-mic r" aria-hidden="true"></span>
+          <div class="device-bezel">
+            <div class="screen dim" id="screen" role="button" tabindex="0" aria-label="Simulated 320 by 240 touchscreen. Activate to poke the face.">
+              <canvas id="screen-canvas" width="640" height="480"></canvas>
+              <div class="lv-settings" id="lv-settings" role="dialog" aria-label="Simulated settings screen"></div>
+            </div>
+          </div>
+          <span class="device-logo" aria-hidden="true">ESP32-S3-BOX-3</span>
+        </div>
+        <div class="device-caption">
+          <span class="state-badge" id="state-badge"><i></i><span id="state-text">Idle</span></span>
+          <span>Simulated 320&times;240 panel &middot; not a live device</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="tabs" role="tablist" aria-label="Simulator controls">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="tab-talk" id="t-talk">Talk</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tab-faces" id="t-faces">Faces</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tab-sensors" id="t-sensors">Sensors</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tab-brain" id="t-brain">Online brain</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tab-log" id="t-log">Log</button>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-talk" aria-labelledby="t-talk">
+          <button class="btn btn-red wake-btn" id="wake">Say &ldquo;Hi E.S.P.&rdquo;</button>
+          <p class="hint">Then pick what you say. Solid chips answer from fixed replies in <code>voice_local_brain.c</code> and play the matching clip from <code>spiffs/voice/</code>. Dashed chips are answers the device builds at runtime (the time, the temperature, a sum); the simulator shows them as such rather than make one up.</p>
+          <input class="search" id="phrase-search" type="search" placeholder="Search <n> offline phrases" aria-label="Search offline phrases">
+          <div class="phrases" id="phrases"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-faces" aria-labelledby="t-faces" hidden>
+          <p class="hint">All expressions from <code>s_emotion_poses</code>. Hover to preview, click to set.</p>
+          <div class="faces-grid" id="faces-grid"></div>
+          <p class="hint" style="margin:18px 0 0">Idle antics from <code>s_antics</code>:</p>
+          <div class="antics" id="antics"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-sensors" aria-labelledby="t-sensors" hidden>
+          <p class="hint">These are <b>simulated inputs</b>. On the device the values come from the BOX-3 sensor dock (AHT-series temperature/humidity sensor and AT581X presence radar) every <span data-fw="sensor-refresh"></span>.</p>
+          <div class="field"><label for="temp">Temperature <span class="tag-sim">sim input</span></label><output id="temp-out"></output><input id="temp" type="range" min="5" max="40" step="0.5" value="22.5"></div>
+          <div class="field"><label for="hum">Humidity <span class="tag-sim">sim input</span></label><output id="hum-out"></output><input id="hum" type="range" min="10" max="90" step="1" value="44"></div>
+          <div class="field"><label for="dock">Sensor dock attached <span class="tag-sim">sim input</span></label><button class="lv-switch" id="dock" role="switch" aria-checked="true" aria-label="Sensor dock attached"></button><small>Without the dock the firmware hides the readout and says so politely when asked.</small></div>
+          <div class="field"><label>Someone sits down <span class="tag-sim">sim input</span></label><button class="btn btn-ghost" id="arrive" style="padding:8px 14px;font-size:14px">Trigger presence</button><small>The radar's "arrived" event: the buddy looks up, quietly, with no chime.</small></div>
+          <div class="field"><label>Battery</label><span class="tag-na">Not in firmware</span><small>v<span data-fw="version"></span> has no battery measurement. The simulator shows nothing rather than invent a number. See the roadmap.</small></div>
+          <div class="field"><label>Motion (IMU)</label><span class="tag-na">Not in firmware</span><small>The BOX-3's onboard ICM42670 is not read by this firmware yet. No fake axes.</small></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-brain" aria-labelledby="t-brain" hidden>
+          <p class="hint">A direct port of <code>voice_router_decide()</code>, the pure function that decides whether a question is worth a cloud request. Nothing is sent anywhere from this page.</p>
+          <div class="router" id="router"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-log" aria-labelledby="t-log" hidden>
+          <p class="hint">Events from the simulator, in the style of the serial monitor. Every line is tagged <b>SIM</b>.</p>
+          <div class="log" id="log" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pad" style="padding-top:0">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Offline first</p>
+      <h2 class="headline">It works with the<br>Wi-Fi unplugged.</h2>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+</section>
+
+<section id="status" class="pad" style="padding-top:0">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Honest status</p>
+      <h2 class="headline">What is real, and what is next.</h2>
+      <p class="sub">Labels follow the project's rule: nothing is called tested on hardware without logs to show for it.</p>
+    </div>
+    <div class="status status-scroll reveal">
+      <table>
+        <thead><tr><th>Feature</th><th>State</th><th>Evidence</th></tr></thead>
+        <tbody>
+          <tr><td>Firmware build (ESP-IDF v5.5.5, esp32s3)</td><td><span class="badge b-build">Verified build</span></td><td>Built with <code>idf.py build</code>; app image 1,965,360 bytes, 47% of the app partition free. See <code>docs/BUILD_RESULTS.md</code>.</td></tr>
+          <tr><td>Face, 48 expressions, 12 idle antics, lip sync</td><td><span class="badge b-impl">In firmware</span></td><td><code>main/face/</code>. This page renders the same tables.</td></tr>
+          <tr><td>Wake word + offline phrases (ESP-SR)</td><td><span class="badge b-impl">In firmware</span></td><td><code>main/voice/voice_wakeword.c</code>, <code>voice_commands.c</code></td></tr>
+          <tr><td>Offline voice clips</td><td><span class="badge b-impl">In firmware</span></td><td><span data-count="clips"></span> clips in <code>spiffs/voice/</code>, named by FNV-1a hash of the reply.</td></tr>
+          <tr><td>Optional online brain (OpenAI)</td><td><span class="badge b-impl">In firmware</span></td><td>Off by default; key never in this repository.</td></tr>
+          <tr><td>Temperature, humidity, presence</td><td><span class="badge b-impl">In firmware</span></td><td>Sensor dock only. Simulated on this page.</td></tr>
+          <tr><td>Host unit tests</td><td><span class="badge b-plan">Run in CI</span></td><td><code>scripts/run_tests.py</code> needs a desktop C compiler; CI runs it on Ubuntu.</td></tr>
+          <tr><td>Battery monitoring</td><td><span class="badge b-plan">Planned</span></td><td>Needs a verified battery accessory and voltage sense first.</td></tr>
+          <tr><td>IMU gestures (ICM42670)</td><td><span class="badge b-plan">Planned</span></td><td>Onboard sensor per the official BSP; not read yet.</td></tr>
+          <tr><td>This web simulator</td><td><span class="badge b-sim">Simulation</span></td><td>Runs in the browser. Never shows device data.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="center reveal" style="margin-top:110px">
+      <p class="eyebrow">Build it</p>
+      <h2 class="headline">Four commands.</h2>
+      <p class="sub">From an <b>ESP-IDF 5.5 CMD</b> window. Not v6: it removed the I2C driver the sensor dock uses.</p>
+    </div>
+    <pre class="terminal reveal"><span class="c">:: cmd.exe, ESP-IDF v5.5.x environment loaded</span>
+<span class="p">&gt; </span>git clone https://github.com/Normansrule/esp-box-voice-assistant
+<span class="p">&gt; </span>cd esp-box-voice-assistant
+<span class="p">&gt; </span>idf.py set-target esp32s3
+<span class="p">&gt; </span>idf.py build
+<span class="p">&gt; </span>idf.py -p %ESP_PORT% flash monitor</pre>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>ESP-BOX Voice &middot; Desk Buddy firmware <span data-fw="version"></span>. Unlicense / CC0, board support Apache-2.0.</span>
+    <span>Everything on this page is a browser simulation of the firmware's UI. It is not connected to a device.</span>
+  </div>
+</footer>
+
+<script src="assets/firmware-data.js"></script>
+<script src="assets/face.js"></script>
+<script src="assets/sim.js"></script>
+<script type="module" src="assets/device3d.js"></script>
+</body>
+</html>

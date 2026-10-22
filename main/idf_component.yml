@@ -1,0 +1,23 @@
+## Managed components pulled from the Espressif component registry.
+##
+## Compared with the stock factory demo this list is noticeably shorter: ESP
+## RainMaker, the IR learner and the LED strip driver are all gone, because the
+## desk buddy does not use them. Dropping them frees a large slice of the
+## application partition, which is what makes room for the OpenAI client and a
+## bigger music image.
+
+dependencies:
+  idf: '>=5.1'
+
+  # Wake word and command recognition, running on the chip itself.
+  espressif/esp-sr: 1.4.*
+
+  # MP3 playback for chimes, music and spoken replies.
+  chmorgan/esp-audio-player: 1.0.5
+
+  # The sensor dock: temperature/humidity sensor and presence radar.
+  espressif/aht20: ^0.1.0
+  espressif/at581x: ^0.1.0
+
+  # Speech to text, chat and text to speech for the online brain.
+  espressif/openai: 1.0.*

@@ -1,0 +1,195 @@
+# Desk Buddy build configuration.
+#
+# Run `idf.py fullclean` after changing anything here, then rebuild. If you have
+# an existing sdkconfig in this folder, delete it first — these defaults are only
+# consulted when there is no sdkconfig yet.
+
+# ---------------------------------------------------------------------------
+# Target and flash
+# ---------------------------------------------------------------------------
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_APP_RETRIEVE_LEN_ELF_SHA=9
+
+# Which board. Stated explicitly rather than left to the Kconfig default,
+# because components/bsp reads this file to decide whether to compile the
+# sensor-dock drivers, and a silent wrong guess there means no temperature or
+# humidity readings with nothing in the log to explain why.
+CONFIG_BSP_BOARD_ESP32_S3_BOX_3=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+
+# ---------------------------------------------------------------------------
+# Speech recognition models
+#
+# WakeNet 9 gives us the "Hi E.S.P." (English) and "Hi Lexin" (Chinese) wake
+# words. MultiNet 6 is the phrase recogniser; the English build accepts plain
+# text commands, which is why voice_commands.c can be written in English rather
+# than in phonetic spelling.
+# ---------------------------------------------------------------------------
+CONFIG_SR_WN_LOAD_MULIT_WORD=y
+CONFIG_SR_WN_WN9_HILEXIN_MULTI=y
+CONFIG_SR_WN_WN9_HIESP_MULTI=y
+CONFIG_SR_MN_CN_MULTINET6_QUANT=y
+CONFIG_SR_MN_EN_MULTINET6_QUANT=y
+
+# ---------------------------------------------------------------------------
+# Bluetooth: off.
+#
+# The ESP32-S3 has no Bluetooth Classic radio, so it cannot receive audio from a
+# phone no matter what. Nothing in this firmware uses Bluetooth LE either, and
+# turning the stack off frees a substantial amount of flash and RAM.
+# ---------------------------------------------------------------------------
+# CONFIG_BT_ENABLED is not set
+
+# ---------------------------------------------------------------------------
+# Memory
+# ---------------------------------------------------------------------------
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+# Task stacks stay in internal RAM. The speech front end and the audio player
+# both have hard timing requirements, and PSRAM stack access is slow enough to
+# cause dropped frames. (Renamed from CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY
+# in ESP-IDF 5.5.)
+# CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM is not set
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=1024
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# Internal RAM held in reserve for allocations that CANNOT live in PSRAM — DMA
+# buffers, and the I2C driver's command descriptors. Without a reserve, an
+# ordinary allocation spree (opening the settings screen builds a few hundred
+# LVGL objects) can consume the last of it, and the next sensor poll fails with
+# "i2c command link error" followed by an abort inside the AHT20 driver.
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=16384
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+CONFIG_ESP32S3_DATA_CACHE_64KB=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+
+# ---------------------------------------------------------------------------
+# Clocks and power
+# ---------------------------------------------------------------------------
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+CONFIG_PM_ENABLE=y
+CONFIG_PM_DFS_INIT_AUTO=y
+CONFIG_PM_SLP_IRAM_OPT=y
+CONFIG_PM_RTOS_IDLE_OPT=y
+CONFIG_ESP_PHY_MAC_BB_PD=y
+CONFIG_EXAMPLE_MAX_CPU_FREQ_240=y
+CONFIG_EXAMPLE_MIN_CPU_FREQ_40M=y
+CONFIG_EXAMPLE_POWER_SAVE_MAX_MODEM=y
+CONFIG_EXAMPLE_WIFI_LISTEN_INTERVAL=10
+
+# ---------------------------------------------------------------------------
+# FreeRTOS
+# ---------------------------------------------------------------------------
+CONFIG_FREERTOS_HZ=1000
+CONFIG_FREERTOS_TIMER_TASK_STACK_DEPTH=3120
+CONFIG_FREERTOS_VTASKLIST_INCLUDE_COREID=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH=y
+# app_main's stack. The default is 3584, and app_main is where the settings
+# migration runs — it briefly holds a copy of the saved layout AND a copy of
+# each older layout it knows how to upgrade from. Those are ~950 bytes each and
+# there are three of them now. They were made static in buddy_settings.c so
+# they no longer sit here at all, but the headroom is worth having: a stack
+# overflow at this point in the boot happens before the display is initialised,
+# so it presents as a completely black screen with nothing to go on.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=5120
+CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
+CONFIG_ESP_IPC_TASK_STACK_SIZE=2048
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=7
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# ---------------------------------------------------------------------------
+# Wi-Fi and TLS
+#
+# The buffer counts are trimmed down because the buddy makes a handful of small
+# HTTPS requests rather than moving bulk data, and the RAM is better spent on
+# the speech models.
+# ---------------------------------------------------------------------------
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=3
+CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=8
+CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=4
+CONFIG_ESP_WIFI_CACHE_TX_BUFFER_NUM=16
+CONFIG_ESP_WIFI_TX_BA_WIN=4
+CONFIG_ESP_WIFI_RX_BA_WIN=4
+CONFIG_ESP_WIFI_AMSDU_TX_ENABLED=y
+# CONFIG_ESP_WIFI_IRAM_OPT is not set
+# CONFIG_ESP_WIFI_RX_IRAM_OPT is not set
+CONFIG_ESP_WIFI_SLP_IRAM_OPT=y
+CONFIG_LWIP_TCPIP_RECVMBOX_SIZE=16
+# CONFIG_LWIP_DHCPS is not set
+# CONFIG_LWIP_IPV6 is not set
+# Room for three time servers: one handed out by the router over DHCP, plus the
+# two public ones named in net_time.c. The default is 1, which would silently
+# throw the spares away.
+CONFIG_LWIP_SNTP_MAX_SERVERS=3
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+CONFIG_MBEDTLS_DYNAMIC_BUFFER=y
+CONFIG_MBEDTLS_DYNAMIC_FREE_CONFIG_DATA=y
+CONFIG_MBEDTLS_TLS_CLIENT_ONLY=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE_DEFAULT_FULL=y
+# CONFIG_MQTT_TRANSPORT_WEBSOCKET is not set
+# Full printf, NOT the "nano" variant. The nano formatter silently drops %f,
+# and the buddy prints temperatures and humidities all over the place.
+# (Renamed from CONFIG_NEWLIB_NANO_FORMAT in ESP-IDF 5.5.)
+# CONFIG_LIBC_NEWLIB_NANO_FORMAT is not set
+
+# ---------------------------------------------------------------------------
+# Buttons
+# ---------------------------------------------------------------------------
+CONFIG_BUTTON_SHORT_PRESS_TIME_MS=100
+CONFIG_BUTTON_LONG_PRESS_TIME_MS=5000
+CONFIG_ADC_BUTTON_MAX_BUTTON_PER_CHANNEL=4
+
+# ---------------------------------------------------------------------------
+# Display and LVGL
+#
+# The face is drawn from ordinary LVGL widgets, so the only extras needed are a
+# couple of larger fonts. Image decoders are left off: there are no bitmaps in
+# this firmware at all, which keeps the binary small.
+# ---------------------------------------------------------------------------
+# Draw-strip height, in pixels. This buffer has to be DMA-capable, which means
+# it comes out of internal RAM — the scarcest thing on the board.
+#
+#   20 lines   12.5 KB   twelve SPI flushes for a full-screen redraw
+#   30 lines   19.2 KB   eight flushes, and ~6 KB more of internal RAM spent
+#   40 lines   50.0 KB   with double buffering: what starved the I2C driver
+#                        badly enough to abort inside the AHT20 sensor read
+#
+# 30 is the compromise: a third fewer round trips through the SPI bus than 20,
+# for 6 KB, which the boot self-test shows there is comfortably room for. If
+# "Internal RAM" ever drops near 35 KB, this is the first number to lower.
+CONFIG_BSP_LCD_DRAW_BUF_HEIGHT=30
+CONFIG_LV_COLOR_16_SWAP=y
+CONFIG_LV_MEM_CUSTOM=y
+# Three caption sizes. ui_speech_bubble.c measures a caption at each in turn and
+# keeps the largest that fits, so a long answer gets smaller rather than getting
+# an ellipsis. Without the 12 px tier a reply over roughly 400 characters runs
+# off the top of the screen; the bubble logs a warning at boot if it is missing.
+CONFIG_LV_FONT_MONTSERRAT_12=y
+CONFIG_LV_FONT_MONTSERRAT_14=y
+CONFIG_LV_FONT_MONTSERRAT_16=y
+CONFIG_LV_FONT_FMT_TXT_LARGE=y
+# CONFIG_LV_USE_FONT_PLACEHOLDER is not set
+CONFIG_LV_USE_FS_POSIX=y
+CONFIG_LV_FS_POSIX_LETTER=83
+
+# ---------------------------------------------------------------------------
+# OpenAI client
+#
+# Only the three services the buddy actually uses are compiled in.
+# ---------------------------------------------------------------------------
+CONFIG_ENABLE_CHAT_COMPLETION=y
+CONFIG_ENABLE_AUDIO_TRANSCRIPTION=y
+CONFIG_ENABLE_AUDIO_SPEECH=y
+# CONFIG_ENABLE_EMBEDDING is not set
+# CONFIG_ENABLE_MODERATION is not set
+# CONFIG_ENABLE_COMPLETION is not set
+# CONFIG_ENABLE_EDIT is not set
+# CONFIG_ENABLE_IMAGE_GENERATION is not set
+# CONFIG_ENABLE_IMAGE_VARIATION is not set
+# CONFIG_ENABLE_IMAGE_EDIT is not set
+# CONFIG_ENABLE_AUDIO_TRANSLATION is not set
