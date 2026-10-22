@@ -18,6 +18,19 @@
  * brackets — "[curious] Good question, ..." — which is parsed off and used to
  * set the expression. That is what makes cloud answers feel like they belong to
  * the same character as the offline ones.
+ *
+ * TWO PLACES THE ANSWERS CAN COME FROM
+ * ------------------------------------
+ * The same three requests work against two kinds of server, chosen by the brain
+ * mode in Settings:
+ *
+ *   OpenAI     api.openai.com over HTTPS, with the owner's API key.
+ *   Home AI    tools/home_brain/home_brain.py on a computer on the same Wi-Fi,
+ *              over plain HTTP: Whisper for hearing, a small open model (via
+ *              Ollama) for answering, Piper for the voice. No key, no account,
+ *              no internet needed once it is installed.
+ *
+ * Both speak the same OpenAI-shaped API, which is why one client serves both.
  */
 
 #pragma once
@@ -76,9 +89,25 @@ typedef struct {
 esp_err_t voice_cloud_brain_start(const voice_cloud_callbacks_t *callbacks);
 
 /**
- * @brief True when there is a key, the feature is on, and the network is up.
+ * @brief True when the brain the current mode uses could be asked right now.
+ *
+ * In Home AI mode that is voice_cloud_brain_home_is_available(), otherwise
+ * voice_cloud_brain_openai_is_available().
  */
 bool voice_cloud_brain_is_available(void);
+
+/**
+ * @brief True when there is an OpenAI key, the switch is on, and Wi-Fi is up.
+ */
+bool voice_cloud_brain_openai_is_available(void);
+
+/**
+ * @brief True when a home brain address is saved and Wi-Fi is up.
+ *
+ * Cannot tell whether that computer is switched on. A question finds out in
+ * about a second (see BUDDY_HOME_BRAIN_PROBE_TIMEOUT_MS) rather than hanging.
+ */
+bool voice_cloud_brain_home_is_available(void);
 
 /**
  * @brief Explain in a few words why the cloud brain is unavailable.

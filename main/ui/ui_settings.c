@@ -69,6 +69,7 @@ static lv_obj_t *s_wifi_network_list;
  */
 static lv_obj_t   *s_wifi_row_value;
 static lv_obj_t   *s_api_key_row_value;
+static lv_obj_t   *s_home_url_row_value;
 static lv_obj_t   *s_requests_row_value;
 static lv_obj_t   *s_about_label;
 static lv_timer_t *s_main_page_timer;
@@ -392,6 +393,9 @@ static void brain_mode_changed_cb(lv_event_t *event)
                            : BUDDY_BRAIN_SMART;
     buddy_settings_save();
 
+    /* Home AI and OpenAI are different servers; start the next chat afresh. */
+    voice_cloud_brain_reset_conversation();
+
     ESP_LOGI(TAG, "Brain mode is now %d", (int)settings->brain_mode);
 }
 
@@ -518,6 +522,22 @@ static void personality_row_cb(lv_event_t *event)
     (void)event;
     open_text_entry("Personality", buddy_settings_get()->personality_prompt,
                     false, BUDDY_PERSONALITY_MAX_LEN - 1, personality_entered);
+}
+
+static void home_brain_url_entered(const char *text)
+{
+    buddy_settings_t *settings = buddy_settings_get();
+    strncpy(settings->home_brain_url, text, sizeof(settings->home_brain_url) - 1);
+    settings->home_brain_url[sizeof(settings->home_brain_url) - 1] = '\0';
+    buddy_settings_save();
+    voice_cloud_brain_reset_conversation();
+}
+
+static void home_brain_url_row_cb(lv_event_t *event)
+{
+    (void)event;
+    open_text_entry("Home AI address", buddy_settings_get()->home_brain_url,
+                    false, BUDDY_HOME_BRAIN_URL_MAX_LEN - 1, home_brain_url_entered);
 }
 
 static void stream_url_entered(const char *text)
@@ -1276,6 +1296,14 @@ static void main_page_refresh_cb(lv_timer_t *timer)
         }
     }
 
+    if (s_home_url_row_value != NULL) {
+        const char *url = buddy_settings_get()->home_brain_url;
+        lv_label_set_text(s_home_url_row_value, (url[0] != '\0') ? url : "Not set");
+        lv_obj_set_style_text_color(s_home_url_row_value,
+                                    (url[0] != '\0') ? FACE_COLOR_TEXT : FACE_COLOR_TEXT_MUTED,
+                                    LV_PART_MAIN);
+    }
+
     if (s_requests_row_value != NULL) {
         const uint16_t left = voice_assistant_requests_remaining();
 
@@ -1402,7 +1430,7 @@ static void build_main_page(void)
     lv_obj_t *mode_dropdown = lv_dropdown_create(mode_row);
     lv_obj_set_width(mode_dropdown, 148);
     lv_obj_align(mode_dropdown, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_dropdown_set_options(mode_dropdown, "Never\nOnly when stuck\nAlways");
+    lv_dropdown_set_options(mode_dropdown, "Never\nOnly when stuck\nAlways\nHome AI");
     lv_dropdown_set_selected(mode_dropdown, (uint16_t)settings->brain_mode);
     lv_obj_add_event_cb(mode_dropdown, brain_mode_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
@@ -1441,6 +1469,30 @@ static void build_main_page(void)
     lv_obj_set_style_text_font(cloud_note, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_set_style_pad_left(cloud_note, 4, LV_PART_MAIN);
     lv_obj_set_style_pad_top(cloud_note, 2, LV_PART_MAIN);
+
+    /* --- The home brain ---------------------------------------------------- */
+    /*
+     * Its own heading, because it is not the online brain: no account, no key,
+     * no bill. It is chosen with "Home AI" in the dropdown above and needs only
+     * an address, which home_brain.py prints when it starts.
+     */
+    create_section_heading(body, "HOME AI (FREE, ON YOUR PC)");
+    s_home_url_row_value = add_navigation_row(body, "Home AI address", "Not set",
+                                              home_brain_url_row_cb);
+
+    lv_obj_t *home_note = lv_label_create(body);
+    lv_label_set_text(home_note,
+                      "Pick Home AI under When to ask, then type the address "
+                      "home_brain.py shows, like 192.168.1.50:8765. Questions go "
+                      "to a small AI on your own computer, never to OpenAI, and "
+                      "cost nothing. If that computer is off, the buddy answers "
+                      "what it can by itself.");
+    lv_label_set_long_mode(home_note, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(home_note, BUDDY_SCREEN_WIDTH - 24);
+    lv_obj_set_style_text_color(home_note, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
+    lv_obj_set_style_text_font(home_note, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_set_style_pad_left(home_note, 4, LV_PART_MAIN);
+    lv_obj_set_style_pad_top(home_note, 2, LV_PART_MAIN);
 
     /* --- Music ----------------------------------------------------------- */
     create_section_heading(body, "MUSIC");
@@ -1636,6 +1688,7 @@ void ui_settings_close(void)
          */
         s_wifi_row_value = NULL;
         s_api_key_row_value = NULL;
+        s_home_url_row_value = NULL;
         s_requests_row_value = NULL;
         s_about_label = NULL;
     }

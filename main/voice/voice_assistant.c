@@ -441,7 +441,8 @@ static void handle_listen_timeout(void)
         .speech_seconds    = voice_recorder_get_speech_seconds(),
         .peak_amplitude    = voice_recorder_get_peak_amplitude(),
 
-        .cloud_ready       = voice_cloud_brain_is_available(),
+        .cloud_ready       = voice_cloud_brain_openai_is_available(),
+        .home_ready        = voice_cloud_brain_home_is_available(),
         .mode              = settings->brain_mode,
 
         .requests_used     = (uint16_t)(settings->requests_per_hour -
@@ -487,10 +488,14 @@ static void handle_listen_timeout(void)
         decline_with_reason(reason);
         return;
 
+    case VOICE_ROUTE_ASK_HOME:
     case VOICE_ROUTE_ASK_CLOUD:
     default:
         break;
     }
+
+    /* The home brain sends no bill, so it neither counts against nor needs the allowance. */
+    const bool asking_home = (route == VOICE_ROUTE_ASK_HOME);
 
     /* The recording itself. A route to the cloud with nothing to send is a bug. */
     if (voice_recorder_get_wav(&wav_data, &wav_length) != ESP_OK) {
@@ -499,13 +504,14 @@ static void handle_listen_timeout(void)
         return;
     }
 
-    if (!voice_assistant_spend_request()) {
+    if (!asking_home && !voice_assistant_spend_request()) {
         decline_with_reason("I have used up my questions for this hour");
         return;
     }
 
-    ESP_LOGI(TAG, "Sending %.2f s to the cloud (%.2f s of it speech)",
+    ESP_LOGI(TAG, "Sending %.2f s to the %s (%.2f s of it speech)",
              voice_recorder_get_duration_seconds(),
+             asking_home ? "home brain" : "cloud",
              voice_recorder_get_speech_seconds());
 
     ui_screen_face_set_emotion(FACE_EMOTION_THINKING);

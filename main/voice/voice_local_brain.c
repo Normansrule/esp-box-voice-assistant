@@ -473,7 +473,12 @@ static void answer_capabilities(voice_reply_t *reply)
      */
     reply->open_examples = true;
 
-    if (buddy_settings_has_cloud_credentials()) {
+    const bool can_answer_anything =
+        (buddy_settings_get()->brain_mode == BUDDY_BRAIN_HOME_AI)
+            ? buddy_settings_has_home_brain()
+            : buddy_settings_has_cloud_credentials();
+
+    if (can_answer_anything) {
         reply_set_text(reply,
                        "Here is my whole list. Try %s — or just ask me anything, "
                        "since I am connected.", examples);

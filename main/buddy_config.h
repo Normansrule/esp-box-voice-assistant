@@ -559,3 +559,30 @@
 
 /** Cap on reply length so the buddy stays snappy and the bubble stays readable. */
 #define BUDDY_CLOUD_MAX_REPLY_TOKENS    160
+
+/*
+ * The home brain: tools/home_brain/home_brain.py on a computer on the LAN.
+ *
+ * The model names are labels, not choices. The home brain answers with
+ * whatever model it was started with (see its --model flag), so the box does
+ * not need reflashing to try a different one.
+ */
+#define BUDDY_HOME_CHAT_MODEL           "home-brain"
+#define BUDDY_HOME_SPEECH_MODEL         "home-voice"
+
+/*
+ * The home brain needs no key, but the OpenAI component always sends an
+ * Authorization header. This placeholder is what it sends; it is not a secret
+ * and the home brain ignores it.
+ */
+#define BUDDY_HOME_PLACEHOLDER_KEY      "no-key-needed"
+
+/*
+ * How long to wait for the home brain to say it is awake, before a question.
+ *
+ * The OpenAI component's own timeout is a minute, and a computer that is
+ * switched off does not refuse a connection — it simply never answers. Without
+ * this check a question to a sleeping PC would sit on "Thinking..." until the
+ * request deadline. With it, the box knows within about a second and says so.
+ */
+#define BUDDY_HOME_BRAIN_PROBE_TIMEOUT_MS 1500

@@ -76,6 +76,36 @@ voice_route_t voice_router_decide(const voice_route_inputs_t *inputs, const char
         return VOICE_ROUTE_ANSWER_OFFLINE;
     }
 
+    if (inputs->mode == BUDDY_BRAIN_HOME_AI) {
+        /*
+         * The home brain is a computer somebody may simply have switched off
+         * for the night, so its absence is ordinary rather than a fault: answer
+         * from the chip, as Smart does, instead of apologising every time.
+         *
+         * cloud_ready is not consulted at all. This mode never touches OpenAI,
+         * so whether a key is saved there is beside the point.
+         */
+        if (!inputs->home_ready) {
+            return VOICE_ROUTE_ANSWER_OFFLINE;
+        }
+
+        /*
+         * Free, but not instant: a small model on an ordinary PC takes a few
+         * seconds to hear, think and speak. So the same two filters Smart uses
+         * to protect money protect time here — a cough is not a question, and
+         * a weak match is a command said badly that the chip can just obey.
+         * There is no hourly allowance, because there is no bill.
+         */
+        if (inputs->speech_seconds < BUDDY_MIN_SPEECH_SECONDS) {
+            return VOICE_ROUTE_ANSWER_OFFLINE;
+        }
+        if (inputs->phrase_matched &&
+            inputs->phrase_confidence >= BUDDY_COMMAND_NEARLY_CONFIDENCE) {
+            return VOICE_ROUTE_ANSWER_OFFLINE;
+        }
+        return VOICE_ROUTE_ASK_HOME;
+    }
+
     if (!inputs->cloud_ready) {
         /*
          * Smart mode falls back rather than complaining.

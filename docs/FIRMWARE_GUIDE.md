@@ -181,13 +181,18 @@ with no network at all, and cost nothing to run.
 
 ### Choosing when it uses AI
 
-Three modes, in **gear → ONLINE BRAIN → When to ask**:
+Four modes, in **gear → ONLINE BRAIN → When to ask**:
 
 | Mode | What it does | What it costs |
 | --- | --- | --- |
 | **Never** | Everything on the chip. The default. | Nothing |
 | **Only when stuck** | Answers on the chip wherever it can; pays only for what it genuinely cannot do | Rarely |
 | **Always** | Anything the recogniser did not match goes up | Per question |
+| **Home AI** | Anything unmatched goes to a small open AI on your own computer (Whisper + llama3.2 via Ollama), never to OpenAI. See [tools/home_brain](../tools/home_brain/README.md) | Nothing |
+
+Home AI needs no key and has no hourly limit. If that computer is off, the box
+finds out in about a second and answers offline instead. Untested on hardware
+so far.
 
 "Only when stuck" is the interesting one. Before spending a request it checks
 four things: the phrase recogniser did not confidently match (a recognised

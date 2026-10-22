@@ -59,6 +59,16 @@ typedef enum {
     /** Anything unrecognised goes up. Fastest to answer, quickest to spend. */
     BUDDY_BRAIN_ALWAYS_ASK,
 
+    /**
+     * Anything unrecognised goes to a small open model running on a computer
+     * on the same network — the box's own AI, with no OpenAI account, no key
+     * and no bill. Appended rather than inserted, so the numbers already saved
+     * in flash for the other three keep their meaning.
+     *
+     * See tools/home_brain/ for the program that runs on that computer.
+     */
+    BUDDY_BRAIN_HOME_AI,
+
     BUDDY_BRAIN_MODE_COUNT,
 } buddy_brain_mode_t;
 
@@ -112,6 +122,7 @@ typedef enum {
  */
 #define BUDDY_CLOUD_API_KEY_MAX_LEN     256
 #define BUDDY_CLOUD_BASE_URL_MAX_LEN    128
+#define BUDDY_HOME_BRAIN_URL_MAX_LEN    128
 #define BUDDY_STREAM_URL_MAX_LEN        192
 #define BUDDY_TIMEZONE_MAX_LEN          40
 #define BUDDY_PERSONALITY_MAX_LEN       192
@@ -158,6 +169,15 @@ typedef struct {
     char     cloud_api_key[BUDDY_CLOUD_API_KEY_MAX_LEN];
     char     cloud_base_url[BUDDY_CLOUD_BASE_URL_MAX_LEN];
     char     personality_prompt[BUDDY_PERSONALITY_MAX_LEN];
+
+    /**
+     * Where the home brain lives, e.g. "http://192.168.1.50:8765/v1/".
+     *
+     * Its own field rather than a second use of cloud_base_url, so switching
+     * between OpenAI and the home brain is one dropdown and never retyping an
+     * address. Empty means "not set up", which the router treats as offline.
+     */
+    char     home_brain_url[BUDDY_HOME_BRAIN_URL_MAX_LEN];
 
     /* --- Music ------------------------------------------------------------ */
     buddy_music_source_t music_source;
@@ -216,6 +236,14 @@ bool buddy_settings_has_wifi_credentials(void);
  * @brief True when the cloud brain is switched on AND has an API key.
  */
 bool buddy_settings_has_cloud_credentials(void);
+
+/**
+ * @brief True when a home brain address has been entered.
+ *
+ * Says nothing about whether that computer is switched on — only a request can
+ * find that out. See voice_cloud_brain_home_is_available().
+ */
+bool buddy_settings_has_home_brain(void);
 
 /**
  * @brief Adopt an API key from a file on the flashed filesystem.

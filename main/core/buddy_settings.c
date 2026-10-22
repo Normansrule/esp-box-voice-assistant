@@ -56,8 +56,11 @@ static bool s_started_from_defaults;
  * rather than the exception — every future bump gets one.
  *
  * Bumped to 7 in v3.6: noise_profile joined them.
+ *
+ * Bumped to 8 after v3.7.1: home_brain_url joined the voice section, for the Home
+ * AI brain mode. Migrated like the others; see migrate_from_v7().
  */
-#define SETTINGS_LAYOUT_VERSION     7
+#define SETTINGS_LAYOUT_VERSION     8
 
 /* The single in-RAM copy that every module reads from. */
 static buddy_settings_t s_settings;
@@ -325,6 +328,88 @@ static void migrate_from_v6(const settings_v6_t *old)
 }
 
 /**
+ * The v7 layout, frozen exactly as v3.6 to v3.7 wrote it. Same rules as the
+ * three above.
+ */
+typedef struct {
+    uint32_t settings_layout_version;
+
+    uint8_t  speaker_volume;
+    bool     chimes_enabled;
+
+    uint8_t  screen_brightness;
+    bool     idle_antics_enabled;
+    bool     touch_antics_enabled;
+
+    buddy_temperature_unit_t temperature_unit;
+    bool     show_sensor_readout;
+
+    buddy_language_t language;
+    bool     cloud_brain_enabled;
+    buddy_brain_mode_t brain_mode;
+    uint16_t requests_per_hour;
+    buddy_noise_profile_t noise_profile;
+    char     cloud_api_key[256];
+    char     cloud_base_url[128];
+    char     personality_prompt[192];
+    /* home_brain_url arrives after this point in v8. */
+
+    buddy_music_source_t music_source;
+    char     stream_url[192];
+
+    char     wifi_ssid[33];
+    char     wifi_password[64];
+    char     timezone[40];
+} settings_v7_t;
+
+/**
+ * @brief Copy a v7 blob into the current struct, field by field.
+ *
+ * Every v7 field comes across unchanged. The new one, home_brain_url, starts
+ * empty: the home brain is something you set up on purpose, never something an
+ * upgrade switches on.
+ */
+static void migrate_from_v7(const settings_v7_t *old)
+{
+    buddy_settings_reset_to_defaults();
+
+    s_settings.speaker_volume       = old->speaker_volume;
+    s_settings.chimes_enabled       = old->chimes_enabled;
+
+    s_settings.screen_brightness    = old->screen_brightness;
+    s_settings.idle_antics_enabled  = old->idle_antics_enabled;
+    s_settings.touch_antics_enabled = old->touch_antics_enabled;
+
+    s_settings.temperature_unit     = old->temperature_unit;
+    s_settings.show_sensor_readout  = old->show_sensor_readout;
+
+    s_settings.language             = old->language;
+    s_settings.cloud_brain_enabled  = old->cloud_brain_enabled;
+    s_settings.brain_mode           = old->brain_mode;
+    s_settings.requests_per_hour    = old->requests_per_hour;
+    s_settings.noise_profile        = old->noise_profile;
+    s_settings.music_source         = old->music_source;
+
+    memcpy(s_settings.cloud_api_key, old->cloud_api_key, sizeof(old->cloud_api_key));
+    s_settings.cloud_api_key[sizeof(s_settings.cloud_api_key) - 1] = '\0';
+
+    strncpy(s_settings.cloud_base_url, old->cloud_base_url,
+            sizeof(s_settings.cloud_base_url) - 1);
+    strncpy(s_settings.personality_prompt, old->personality_prompt,
+            sizeof(s_settings.personality_prompt) - 1);
+    strncpy(s_settings.stream_url, old->stream_url, sizeof(s_settings.stream_url) - 1);
+    strncpy(s_settings.wifi_ssid, old->wifi_ssid, sizeof(s_settings.wifi_ssid) - 1);
+    strncpy(s_settings.wifi_password, old->wifi_password, sizeof(s_settings.wifi_password) - 1);
+    strncpy(s_settings.timezone, old->timezone, sizeof(s_settings.timezone) - 1);
+
+    s_settings.home_brain_url[0] = '\0';
+
+    s_settings.settings_layout_version = SETTINGS_LAYOUT_VERSION;
+
+    ESP_LOGW(TAG, "Upgraded saved configuration from layout v7 to v%d", SETTINGS_LAYOUT_VERSION);
+}
+
+/**
  * @brief Try to read a blob written by an older firmware and bring it forward.
  *
  * Newest layout first: the sizes differ, so trying v5 before v4 means the wrong
@@ -354,11 +439,20 @@ static bool try_migrate_older_layout(nvs_handle_t nvs)
      * Safe as statics because this runs exactly once, from app_main, before any
      * other task exists.
      */
+    static settings_v7_t seven;
     static settings_v6_t six;
     static settings_v5_t five;
     static settings_v4_t four;
 
-    size_t blob_size = sizeof(six);
+    size_t blob_size = sizeof(seven);
+
+    if (nvs_get_blob(nvs, SETTINGS_NVS_BLOB_KEY, &seven, &blob_size) == ESP_OK &&
+        blob_size == sizeof(seven) && seven.settings_layout_version == 7) {
+        migrate_from_v7(&seven);
+        return true;
+    }
+
+    blob_size = sizeof(six);
 
     if (nvs_get_blob(nvs, SETTINGS_NVS_BLOB_KEY, &six, &blob_size) == ESP_OK &&
         blob_size == sizeof(six) && six.settings_layout_version == 6) {
@@ -574,6 +668,11 @@ bool buddy_settings_has_wifi_credentials(void)
 bool buddy_settings_has_cloud_credentials(void)
 {
     return s_settings.cloud_brain_enabled && (s_settings.cloud_api_key[0] != '\0');
+}
+
+bool buddy_settings_has_home_brain(void)
+{
+    return s_settings.home_brain_url[0] != '\0';
 }
 
 /* ------------------------------------------------------------------------ */

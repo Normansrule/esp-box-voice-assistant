@@ -13,6 +13,7 @@
 #include "freertos/task.h"
 
 #include "esp_check.h"
+#include "esp_http_client.h"
 #include "esp_log.h"
 
 #include "OpenAI.h"
@@ -84,18 +85,99 @@ static uint32_t                     s_turns_since_reset;
 /** The audio of the last spoken reply, kept alive while it plays. */
 static OpenAI_SpeechResponse_t *s_last_speech;
 
+/**
+ * Which server the client above was built for. A change of brain mode has to
+ * rebuild it, because the address, the key and the model names all differ.
+ */
+static bool s_client_is_home;
+
+/** The home brain's address as the client wants it: scheme, host, trailing /. */
+static char s_home_base_url[BUDDY_HOME_BRAIN_URL_MAX_LEN + 16];
+
+/* ------------------------------------------------------------------------ */
+/* Which brain                                                               */
+/* ------------------------------------------------------------------------ */
+
+/** True when the owner picked Home AI, so every request goes to their PC. */
+static bool using_home_brain(void)
+{
+    return buddy_settings_get()->brain_mode == BUDDY_BRAIN_HOME_AI;
+}
+
+/** What to call the brain in a spoken failure, so the owner knows which one. */
+static const char *brain_name(void)
+{
+    return using_home_brain() ? "my home brain" : "my online brain";
+}
+
+/**
+ * @brief Tidy the typed home brain address into what the client expects.
+ *
+ * People type "192.168.1.50:8765", and the client glues endpoint names straight
+ * onto the end of the base URL. So add "http://" when there is no scheme and a
+ * trailing slash when there is none; anything already complete is left alone.
+ */
+static const char *home_base_url(void)
+{
+    const char *typed = buddy_settings_get()->home_brain_url;
+    const bool has_scheme = (strncmp(typed, "http://", 7) == 0) ||
+                            (strncmp(typed, "https://", 8) == 0);
+    const size_t length = strlen(typed);
+    const bool has_slash = (length > 0) && (typed[length - 1] == '/');
+
+    snprintf(s_home_base_url, sizeof(s_home_base_url), "%s%s%s",
+             has_scheme ? "" : "http://", typed, has_slash ? "" : "/");
+    return s_home_base_url;
+}
+
+/** The base URL of whichever brain is in use. */
+static const char *active_base_url(void)
+{
+    return using_home_brain() ? home_base_url() : buddy_settings_get()->cloud_base_url;
+}
+
+/**
+ * True when the active brain is reached over TLS, and so needs a set clock.
+ * A home brain on the LAN is usually plain http:// and does not.
+ */
+static bool active_brain_needs_tls(void)
+{
+    return strncmp(active_base_url(), "https://", 8) == 0;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Availability                                                              */
 /* ------------------------------------------------------------------------ */
 
-bool voice_cloud_brain_is_available(void)
+bool voice_cloud_brain_openai_is_available(void)
 {
     return buddy_settings_has_cloud_credentials() && net_wifi_is_connected();
+}
+
+bool voice_cloud_brain_home_is_available(void)
+{
+    return buddy_settings_has_home_brain() && net_wifi_is_connected();
+}
+
+bool voice_cloud_brain_is_available(void)
+{
+    return using_home_brain() ? voice_cloud_brain_home_is_available()
+                              : voice_cloud_brain_openai_is_available();
 }
 
 const char *voice_cloud_brain_explain_unavailability(void)
 {
     const buddy_settings_t *settings = buddy_settings_get();
+
+    if (using_home_brain()) {
+        if (!buddy_settings_has_home_brain()) {
+            return "I do not know where my home brain is yet";
+        }
+        if (!net_wifi_is_connected()) {
+            return "I am not on Wi-Fi";
+        }
+        return NULL;
+    }
 
     if (!settings->cloud_brain_enabled) {
         return "my online brain is switched off";
@@ -128,6 +210,7 @@ static void destroy_client(void)
     s_chat = NULL;
     s_speech = NULL;
     s_turns_since_reset = 0;
+    s_client_is_home = false;
 }
 
 /**
@@ -135,31 +218,49 @@ static void destroy_client(void)
  */
 static esp_err_t ensure_client(void)
 {
+    const bool home = using_home_brain();
+
+    /* Built for the other brain? Then it is the wrong client; start again. */
+    if (s_client != NULL && s_client_is_home != home) {
+        ESP_LOGI(TAG, "Brain mode changed; rebuilding the client");
+        destroy_client();
+    }
     if (s_client != NULL) {
         return ESP_OK;
     }
 
     const buddy_settings_t *settings = buddy_settings_get();
 
-    /*
-     * Say out loud how long the stored key is, every time the client is built.
-     *
-     * This one line would have saved a great deal of trouble. A key truncated
-     * by a too-small buffer is indistinguishable from a wrong key at every
-     * later step — the service just says "incorrect API key" either way — but
-     * it is instantly obvious here, because a project key that reads as 127
-     * characters is a project key with its tail missing.
-     *
-     * The description never contains the secret; see buddy_api_key.c.
-     */
-    char key_description[48];
-    buddy_api_key_describe(settings->cloud_api_key, key_description, sizeof(key_description));
-    ESP_LOGI(TAG, "Building the client with key %s", key_description);
 
-    s_client = OpenAICreate(settings->cloud_api_key);
+    if (home) {
+        /*
+         * No key to describe: the home brain needs none, and the placeholder
+         * sent in its place is not a secret. See BUDDY_HOME_PLACEHOLDER_KEY.
+         */
+        ESP_LOGI(TAG, "Building the client for the home brain at %s", home_base_url());
+        s_client = OpenAICreate(BUDDY_HOME_PLACEHOLDER_KEY);
+    } else {
+        /*
+         * Say out loud how long the stored key is, every time the client is
+         * built.
+         *
+         * This one line would have saved a great deal of trouble. A key
+         * truncated by a too-small buffer is indistinguishable from a wrong key
+         * at every later step — the service just says "incorrect API key"
+         * either way — but it is instantly obvious here, because a project key
+         * that reads as 127 characters is a project key with its tail missing.
+         *
+         * The description never contains the secret; see buddy_api_key.c.
+         */
+        char key_description[48];
+        buddy_api_key_describe(settings->cloud_api_key, key_description, sizeof(key_description));
+        ESP_LOGI(TAG, "Building the client with key %s", key_description);
+
+        s_client = OpenAICreate(settings->cloud_api_key);
+    }
     ESP_RETURN_ON_FALSE(s_client != NULL, ESP_ERR_NO_MEM, TAG, "could not create the client");
 
-    OpenAIChangeBaseURL(s_client, settings->cloud_base_url);
+    OpenAIChangeBaseURL(s_client, active_base_url());
 
     /* --- Speech to text ---------------------------------------------- */
     s_transcriber = s_client->audioTranscriptionCreate(s_client);
@@ -181,7 +282,7 @@ static esp_err_t ensure_client(void)
     snprintf(system_prompt, sizeof(system_prompt), "%s%s",
              settings->personality_prompt, MOOD_TAG_INSTRUCTION);
 
-    s_chat->setModel(s_chat, BUDDY_CLOUD_CHAT_MODEL);
+    s_chat->setModel(s_chat, home ? BUDDY_HOME_CHAT_MODEL : BUDDY_CLOUD_CHAT_MODEL);
     s_chat->setSystem(s_chat, system_prompt);
     s_chat->setMaxTokens(s_chat, BUDDY_CLOUD_MAX_REPLY_TOKENS);
     s_chat->setTemperature(s_chat, 0.7f);
@@ -192,13 +293,14 @@ static esp_err_t ensure_client(void)
     /* --- Text to speech ------------------------------------------------ */
     s_speech = s_client->audioSpeechCreate(s_client);
     ESP_RETURN_ON_FALSE(s_speech != NULL, ESP_ERR_NO_MEM, TAG, "no speech synthesiser");
-    s_speech->setModel(s_speech, BUDDY_CLOUD_SPEECH_MODEL);
+    s_speech->setModel(s_speech, home ? BUDDY_HOME_SPEECH_MODEL : BUDDY_CLOUD_SPEECH_MODEL);
     s_speech->setVoice(s_speech, BUDDY_CLOUD_SPEECH_VOICE);
     s_speech->setResponseFormat(s_speech, OPENAI_AUDIO_OUTPUT_FORMAT_MP3);
     s_speech->setSpeed(s_speech, 1.0f);
 
     s_turns_since_reset = 0;
-    ESP_LOGI(TAG, "Cloud client ready (%s)", settings->cloud_base_url);
+    s_client_is_home = home;
+    ESP_LOGI(TAG, "%s client ready (%s)", home ? "Home brain" : "Cloud", active_base_url());
     return ESP_OK;
 }
 
@@ -262,6 +364,45 @@ static void log_api_error(const char *step, const char *body)
         ESP_LOGE(TAG, "  -> This key cannot reach %s. A project-scoped key has to have "
                       "the model enabled for its project.", BUDDY_CLOUD_CHAT_MODEL);
     }
+}
+
+/**
+ * @brief Ask the home brain whether it is awake, with a short timeout.
+ *
+ * A switched-off PC never refuses a connection; it just never answers, and the
+ * OpenAI component would wait a full minute to notice. One small GET with a
+ * tight timeout turns that minute into about a second, so the box can say the
+ * home brain is asleep while the question is still fresh.
+ *
+ * @return true when the home brain answered with a success status.
+ */
+static bool home_brain_is_awake(void)
+{
+    char url[sizeof(s_home_base_url) + 8];
+    snprintf(url, sizeof(url), "%shealth", home_base_url());
+
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_GET,
+        .timeout_ms = BUDDY_HOME_BRAIN_PROBE_TIMEOUT_MS,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (client == NULL) {
+        return false;
+    }
+
+    const esp_err_t err = esp_http_client_perform(client);
+    const int status = (err == ESP_OK) ? esp_http_client_get_status_code(client) : 0;
+    esp_http_client_cleanup(client);
+
+    if (err != ESP_OK || status != 200) {
+        ESP_LOGW(TAG, "Home brain at %s did not answer (%s, HTTP %d)", url,
+                 esp_err_to_name(err), status);
+        ESP_LOGW(TAG, "  -> Is the computer on, and is home_brain.py running on it? "
+                      "Both must be on the same network as the box.");
+        return false;
+    }
+    return true;
 }
 
 /**
@@ -354,13 +495,19 @@ static void process_question(const cloud_request_t *request)
      * over HTTPS, and HTTPS with a 1970 clock fails in a way that reads like a
      * network fault rather than a time fault.
      */
-    if (!wait_for_a_believable_clock()) {
+    if (active_brain_needs_tls() && !wait_for_a_believable_clock()) {
         report_failure("my clock is not set, so I cannot open a secure connection");
         return;
     }
 
+    if (using_home_brain() && !home_brain_is_awake()) {
+        report_failure("my home brain is not answering — is the computer on?");
+        return;
+    }
+
     if (ensure_client() != ESP_OK) {
-        report_failure("I could not start my online brain");
+        report_failure(using_home_brain() ? "I could not start my home brain"
+                                          : "I could not start my online brain");
         return;
     }
 
@@ -378,10 +525,11 @@ static void process_question(const cloud_request_t *request)
          * Nothing came back at all, which is a transport failure rather than a
          * rejection — no reply to read. The two usual causes are worth naming.
          */
-        ESP_LOGE(TAG, "No reply from %s at all.", buddy_settings_get()->cloud_base_url);
+        ESP_LOGE(TAG, "No reply from %s at all.", active_base_url());
         ESP_LOGE(TAG, "  -> Either the TLS handshake failed, or there is no route "
                       "out. Check the Wi-Fi line in the self test.");
-        report_failure("I could not reach my online brain");
+        report_failure(using_home_brain() ? "I could not reach my home brain"
+                                          : "I could not reach my online brain");
         goto cleanup;
     }
 
@@ -391,7 +539,8 @@ static void process_question(const cloud_request_t *request)
      */
     if (looks_like_an_api_error(transcription)) {
         log_api_error("Transcription", transcription);
-        report_failure("my online brain refused the request — check the API key");
+        report_failure(using_home_brain() ? "my home brain could not hear that one"
+                                          : "my online brain refused the request — check the API key");
         goto cleanup;
     }
 
@@ -420,11 +569,13 @@ static void process_question(const cloud_request_t *request)
 
     /* --- Step two: what is the answer? --------------------------------- */
 
-    ESP_LOGI(TAG, "Step 2/3: asking %s", BUDDY_CLOUD_CHAT_MODEL);
+    ESP_LOGI(TAG, "Step 2/3: asking %s",
+             using_home_brain() ? "the home brain" : BUDDY_CLOUD_CHAT_MODEL);
 
     answer_response = s_chat->message(s_chat, transcription, true /* keep history */);
     if (answer_response == NULL) {
-        report_failure("my online brain did not reply");
+        report_failure(using_home_brain() ? "my home brain did not reply"
+                                          : "my online brain did not reply");
         goto cleanup;
     }
 
@@ -440,13 +591,15 @@ static void process_question(const cloud_request_t *request)
     if (answer_response->getLen(answer_response) == 0) {
         const char *error_text = answer_response->getError(answer_response);
         log_api_error("The question", error_text);
-        report_failure("my online brain refused the question — check the API key");
+        report_failure(using_home_brain() ? "my home brain could not answer that"
+                                          : "my online brain refused the question — check the API key");
         goto cleanup;
     }
 
     char *raw_answer = answer_response->getData(answer_response, 0);
     if (raw_answer == NULL || raw_answer[0] == '\0') {
-        report_failure("my online brain sent back nothing");
+        report_failure(using_home_brain() ? "my home brain sent back nothing"
+                                          : "my online brain sent back nothing");
         goto cleanup;
     }
 
@@ -457,7 +610,8 @@ static void process_question(const cloud_request_t *request)
      */
     if (looks_like_an_api_error(raw_answer)) {
         log_api_error("The question", raw_answer);
-        report_failure("my online brain refused the question — check the API key");
+        report_failure(using_home_brain() ? "my home brain could not answer that"
+                                          : "my online brain refused the question — check the API key");
         goto cleanup;
     }
 
@@ -498,7 +652,8 @@ static void process_speak(const cloud_request_t *request)
     release_previous_speech();
 
     if (ensure_client() != ESP_OK) {
-        report_failure("I could not start my online voice");
+        report_failure(using_home_brain() ? "I could not start my home voice"
+                                          : "I could not start my online voice");
         return;
     }
 
@@ -612,7 +767,7 @@ esp_err_t voice_cloud_brain_speak(const char *text)
      * The question path in voice_cloud_brain_ask() has no such fallback, so it
      * waits for the clock instead of giving way.
      */
-    if (!net_time_is_synchronised()) {
+    if (active_brain_needs_tls() && !net_time_is_synchronised()) {
         ESP_LOGI(TAG, "Clock not set yet — leaving this line to the offline voice");
         return ESP_ERR_INVALID_STATE;
     }

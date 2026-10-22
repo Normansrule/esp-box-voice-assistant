@@ -1203,6 +1203,109 @@ TEST(an_unreachable_cloud_explains_itself)
     CHECK(voice_router_decide(NULL, NULL) == VOICE_ROUTE_NOTHING_HEARD);
 }
 
+/** A good question, put to a box in Home AI mode with the home brain set up. */
+static voice_route_inputs_t a_good_home_question(void)
+{
+    voice_route_inputs_t inputs = a_good_question();
+    inputs.mode = BUDDY_BRAIN_HOME_AI;
+    inputs.home_ready = true;
+    inputs.cloud_ready = false;     /* No OpenAI key at all: the point of the mode. */
+    return inputs;
+}
+
+TEST(home_ai_mode_answers_without_openai)
+{
+    voice_route_inputs_t inputs = a_good_home_question();
+
+    /* A real question goes to the home brain, with no OpenAI key anywhere. */
+    CHECK_MSG(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ASK_HOME,
+              "home AI mode would not ask the home brain without an OpenAI key");
+
+    /* And never to OpenAI, even when a key IS saved. */
+    inputs.cloud_ready = true;
+    CHECK_MSG(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ASK_HOME,
+              "home AI mode reached for OpenAI");
+
+    /* No other mode ever routes to the home brain. */
+    for (int mode = 0; mode < BUDDY_BRAIN_MODE_COUNT; mode++) {
+        if (mode == BUDDY_BRAIN_HOME_AI) {
+            continue;
+        }
+        inputs.mode = (buddy_brain_mode_t)mode;
+        CHECK_MSG(voice_router_decide(&inputs, NULL) != VOICE_ROUTE_ASK_HOME,
+                  "mode %d asked the home brain", mode);
+    }
+}
+
+TEST(home_ai_mode_has_no_hourly_allowance)
+{
+    /*
+     * The allowance exists to cap a bill. The home brain sends none, so a spent
+     * allowance (left over from Smart mode, say) must not silence it.
+     */
+    voice_route_inputs_t inputs = a_good_home_question();
+    inputs.requests_used = 30;
+    inputs.requests_allowed = 30;
+
+    const char *reason = NULL;
+    CHECK(voice_router_decide(&inputs, &reason) == VOICE_ROUTE_ASK_HOME);
+    CHECK(reason == NULL);
+}
+
+TEST(home_ai_mode_falls_back_quietly_when_the_pc_is_not_set_up)
+{
+    /*
+     * A computer that is off for the night is ordinary, not a fault. The box
+     * answers what it can from the chip rather than apologising every time.
+     */
+    voice_route_inputs_t inputs = a_good_home_question();
+    inputs.home_ready = false;
+
+    const char *reason = NULL;
+    CHECK_MSG(voice_router_decide(&inputs, &reason) == VOICE_ROUTE_ANSWER_OFFLINE,
+              "home AI mode apologised instead of answering offline");
+    CHECK(reason == NULL);
+}
+
+TEST(home_ai_mode_still_filters_coughs_and_commands)
+{
+    /* Free is not instant, so the speech gate still guards the slow path. */
+    voice_route_inputs_t inputs = a_good_home_question();
+    inputs.speech_seconds = 0.02f;
+    CHECK(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ANSWER_OFFLINE);
+
+    /* A probable command said badly is obeyed on the chip, as in Smart mode. */
+    inputs = a_good_home_question();
+    inputs.phrase_matched = true;
+    inputs.phrase_confidence = 0.07f;   /* under MIN, over NEARLY */
+    CHECK(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ANSWER_OFFLINE);
+
+    /* A match too weak to mean anything goes to the home brain. */
+    inputs.phrase_confidence = 0.02f;
+    CHECK(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ASK_HOME);
+
+    /*
+     * And it does not apply Smart's stricter "a sentence, not a word" bar:
+     * that bar protects money, and there is none here.
+     */
+    inputs = a_good_home_question();
+    inputs.speech_seconds = 0.40f;
+    CHECK(voice_router_decide(&inputs, NULL) == VOICE_ROUTE_ASK_HOME);
+}
+
+TEST(home_ai_is_appended_to_the_saved_mode_numbers)
+{
+    /*
+     * brain_mode is stored in flash as a number. Inserting the new mode in the
+     * middle would quietly turn every saved "Always ask" into something else.
+     */
+    CHECK(BUDDY_BRAIN_OFFLINE_ONLY == 0);
+    CHECK(BUDDY_BRAIN_SMART == 1);
+    CHECK(BUDDY_BRAIN_ALWAYS_ASK == 2);
+    CHECK(BUDDY_BRAIN_HOME_AI == 3);
+    CHECK(BUDDY_BRAIN_MODE_COUNT == 4);
+}
+
 TEST(the_hourly_allowance_counts_and_rolls_over)
 {
     voice_budget_t budget;
@@ -2838,6 +2941,11 @@ int main(void)
     run_smart_mode_wants_a_sentence_not_a_word();
     run_a_spent_allowance_declines_and_says_why();
     run_an_unreachable_cloud_explains_itself();
+    run_home_ai_mode_answers_without_openai();
+    run_home_ai_mode_has_no_hourly_allowance();
+    run_home_ai_mode_falls_back_quietly_when_the_pc_is_not_set_up();
+    run_home_ai_mode_still_filters_coughs_and_commands();
+    run_home_ai_is_appended_to_the_saved_mode_numbers();
     run_the_hourly_allowance_counts_and_rolls_over();
     run_the_allowance_survives_the_clock_jumping();
 

@@ -118,6 +118,7 @@ static const char *brain_mode_name(buddy_brain_mode_t mode)
     case BUDDY_BRAIN_OFFLINE_ONLY: return "offline";
     case BUDDY_BRAIN_SMART:        return "smart";
     case BUDDY_BRAIN_ALWAYS_ASK:   return "always";
+    case BUDDY_BRAIN_HOME_AI:      return "home";
     default:                       return "unknown";
     }
 }

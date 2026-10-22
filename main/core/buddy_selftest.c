@@ -254,6 +254,20 @@ static void check_network(buddy_selftest_report_t *report)
      */
     const buddy_settings_t *settings = buddy_settings_get();
 
+    /*
+     * In Home AI mode the OpenAI key is irrelevant, so report the home brain
+     * instead. Whether that computer is on is not knowable at boot without a
+     * network round trip, so this checks only that it has been set up.
+     */
+    if (settings->brain_mode == BUDDY_BRAIN_HOME_AI) {
+        if (buddy_settings_has_home_brain()) {
+            add_check(report, "Home AI", BUDDY_CHECK_PASSED, "%.40s", settings->home_brain_url);
+        } else {
+            add_check(report, "Home AI", BUDDY_CHECK_WARNING, "chosen, but no address set");
+        }
+        return;
+    }
+
     if (buddy_settings_has_cloud_credentials()) {
         char description[BUDDY_CHECK_DETAIL_MAX_LEN];
         buddy_api_key_describe(settings->cloud_api_key, description, sizeof(description));

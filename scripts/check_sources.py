@@ -63,11 +63,27 @@ def source_files():
 
 
 def strip_comments_and_strings(text):
-    """Remove comments and string literals so they cannot confuse the parsing."""
-    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
-    text = re.sub(r"//[^\n]*", " ", text)
-    text = re.sub(r'"(?:[^"\\]|\\.)*"', '""', text)
-    return text
+    """
+    Remove comments and string literals so they cannot confuse the parsing.
+
+    One pass, whichever starts first wins. Three separate passes got
+    "http://" wrong: the // inside the string was taken for a comment and the
+    rest of the line, closing brackets included, went with it.
+    """
+    token = re.compile(r'"(?:[^"\\\n]|\\.)*"'          # string literal
+                       r"|'(?:[^'\\\n]|\\.)*'"          # character literal
+                       r"|/\*.*?\*/"                     # block comment
+                       r"|//[^\n]*", re.S)               # line comment
+
+    def replace(match):
+        found = match.group(0)
+        if found.startswith('"'):
+            return '""'
+        if found.startswith("'"):
+            return "' '"
+        return " "
+
+    return token.sub(replace, text)
 
 
 def relative(path):

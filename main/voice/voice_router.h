@@ -16,8 +16,8 @@
  * the host tests can put it through every combination that matters instead of
  * hoping.
  *
- * THE THREE MODES
- * ---------------
+ * THE FOUR MODES
+ * --------------
  *   OFFLINE ONLY   Never reach for the cloud. The default, and a complete
  *                  product: a hundred-odd phrases, a face, a timer, sensors,
  *                  music, all free and all instant.
@@ -31,6 +31,15 @@
  *                  What the firmware used to do unconditionally, kept because
  *                  it is the right choice for someone who wants a talking
  *                  encyclopaedia and does not mind paying for one.
+ *
+ *   HOME AI        Anything the recogniser did not match goes to a small open
+ *                  model on a computer on the same network (see
+ *                  tools/home_brain/). The box's own AI: no account, no key,
+ *                  no bill, so no budget. The speech gate and the "probably a
+ *                  command" band still apply, because a home model still costs
+ *                  several seconds of a person's time. When it is not set up,
+ *                  or there is no Wi-Fi, the box answers offline instead of
+ *                  apologising, the same as Smart does.
  *
  * WHY A BUDGET
  * ------------
@@ -59,6 +68,7 @@ typedef enum {
     VOICE_ROUTE_NOTHING_HEARD,      /*!< No speech; say so and stop            */
     VOICE_ROUTE_DECLINE_NO_CLOUD,   /*!< Would ask, but it is off or unusable  */
     VOICE_ROUTE_DECLINE_BUDGET,     /*!< Would ask, but the allowance is spent */
+    VOICE_ROUTE_ASK_HOME,           /*!< Worth a question to the home brain    */
 } voice_route_t;
 
 /** Everything the decision depends on, gathered in one place. */
@@ -86,6 +96,13 @@ typedef struct {
 
     /** Is the cloud actually reachable and configured right now? */
     bool  cloud_ready;
+
+    /**
+     * Is a home brain address set and the Wi-Fi up? Only consulted in HOME AI
+     * mode. It cannot say whether that computer is switched on; the request
+     * finds that out quickly, see voice_cloud_brain.c.
+     */
+    bool  home_ready;
 
     /** How the owner wants this box to behave. */
     buddy_brain_mode_t mode;
