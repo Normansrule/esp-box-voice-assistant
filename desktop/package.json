@@ -1,0 +1,37 @@
+{
+  "name": "desk-buddy-connect",
+  "productName": "Desk Buddy Connect",
+  "version": "0.1.0",
+  "description": "Install Desk Buddy firmware on an ESP32-S3-BOX-3, watch its serial log and control it over USB.",
+  "license": "Unlicense",
+  "author": "Normansrule",
+  "homepage": "https://github.com/Normansrule/esp-box-voice-assistant",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-app": "node scripts/prepare.mjs",
+    "start": "node scripts/prepare.mjs && electron .",
+    "test": "node scripts/prepare.mjs && node test/check.mjs",
+    "dist:win": "node scripts/prepare.mjs && electron-builder --win nsis portable --x64 --publish never"
+  },
+  "dependencies": {
+    "esptool-js": "0.7.0"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "io.github.normansrule.deskbuddyconnect",
+    "productName": "Desk Buddy Connect",
+    "files": ["main.js", "preload.js", "app/**/*", "package.json"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "win": { "icon": "build/icon.png" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Desk-Buddy-Connect-${version}-setup.exe"
+    },
+    "portable": { "artifactName": "Desk-Buddy-Connect-${version}-portable.exe" }
+  }
+}

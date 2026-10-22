@@ -7,6 +7,7 @@ managed_components/
 
 # Site build
 _site/
+firmware_release/
 
 # SECRETS: never commit these
 spiffs/openai_key.txt

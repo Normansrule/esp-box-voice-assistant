@@ -4,9 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:      # release.yml redeploys so the flasher serves the new firmware
 
 permissions:
-  contents: read
+  contents: read      # also lets gh read the releases
   pages: write
   id-token: write
 
@@ -22,6 +23,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Fetch the latest firmware release for the flasher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release download --repo "$GITHUB_REPOSITORY" --dir firmware_release --pattern '*.bin' --pattern 'flasher_args.json' --pattern 'manifest.json'; then
+            ls -l firmware_release
+          else
+            echo "No release published yet; the flasher will ask for local files."
+            rm -rf firmware_release
+          fi
       - run: python tools/build_site.py
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,0 +1,104 @@
+name: Release
+
+# Push a tag like v3.8.0 to publish a release:
+#
+#   git tag -a v3.8.0 -m "Desk Buddy 3.8.0" && git push origin v3.8.0
+#
+# Builds the firmware from that tag, checks no API key went into any image,
+# writes manifest.json for the flasher page, builds the Windows desktop app,
+# attaches everything to a GitHub release, then redeploys Pages so
+# /connect/ serves the new firmware.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.5.5
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets in the source
+        shell: bash
+        run: |
+          test ! -e spiffs/openai_key.txt
+          ! git -c safe.directory='*' grep -nE 'sk-(proj-)?[A-Za-z0-9_-]{20,}' -- ':!*.lock'
+      - name: Build
+        shell: bash
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py set-target esp32s3
+          idf.py build
+          idf.py size
+      - name: Collect images and write the manifest
+        shell: bash
+        run: |
+          python3 tools/firmware_manifest.py release --from-build build \
+            --version "${GITHUB_REF_NAME}" --commit "${GITHUB_SHA}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: release/
+
+  desktop-windows:
+    needs: firmware
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: desktop/firmware
+      - run: npm install --no-audit --no-fund
+      - name: Version the app after the tag
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - run: npm test
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"   # unsigned; see desktop/README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: |
+            desktop/dist/*.exe
+
+  publish:
+    needs: [firmware, desktop-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: release
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows
+          path: release
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l release
+          gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" \
+            --title "Desk Buddy ${GITHUB_REF_NAME}" --generate-notes --verify-tag
+
+  pages:
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/pages.yml

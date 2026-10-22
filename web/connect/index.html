@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Buddy Connect</title>
+<meta name="description" content="Install Desk Buddy firmware on an ESP32-S3-BOX-3, watch its serial log and control it, straight from the browser over USB.">
+<meta name="theme-color" content="#E8362D">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="connect.css">
+<script type="importmap">
+{ "imports": {
+  "esptool-js": "https://cdn.jsdelivr.net/npm/esptool-js@0.7.0/bundle.js"
+} }
+</script>
+<script type="module" src="connect.js"></script>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-row">
+    <a class="brand" href="../" aria-label="ESP-BOX Voice home">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#E8362D"/><rect x="6.2" y="7" width="3.6" height="5.2" rx="1.6" fill="#fff"/><rect x="14.2" y="7" width="3.6" height="5.2" rx="1.6" fill="#fff"/><path d="M7.5 15.5q4.5 3 9 0" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      <span>Desk Buddy <b>Connect</b></span>
+    </a>
+    <span class="chip" id="link-state" data-state="off">Not connected</span>
+    <button class="btn btn-red" id="btn-connect" type="button">Connect box</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="notice" id="no-serial" hidden>
+    <h2>This browser cannot talk to USB serial ports</h2>
+    <p>Open this page in desktop Chrome or Edge (version 89 or newer), or use the Desk Buddy Connect desktop app. Firefox and Safari do not support Web Serial, and neither do phones.</p>
+  </section>
+
+  <section class="intro">
+    <h1>Plug in your box. <span class="red">Flash, watch, talk.</span></h1>
+    <p>Everything happens between this page and the USB cable. Nothing is uploaded, and the firmware files never leave your computer once they are downloaded.</p>
+    <ol class="steps">
+      <li>Plug the ESP32-S3-BOX-3 into this computer with a USB-C data cable.</li>
+      <li>Press <b>Connect box</b> and pick the port named <code>USB JTAG/serial debug unit</code>.</li>
+      <li>Install firmware, open the monitor, or use the controls.</li>
+    </ol>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-install" aria-controls="panel-install" aria-selected="true">Install</button>
+    <button role="tab" id="tab-monitor" aria-controls="panel-monitor" aria-selected="false">Monitor</button>
+    <button role="tab" id="tab-control" aria-controls="panel-control" aria-selected="false">Control</button>
+  </nav>
+
+  <!-- ===================== Install ===================== -->
+  <section class="panel" id="panel-install" role="tabpanel" aria-labelledby="tab-install">
+    <div class="grid2">
+      <div class="card">
+        <h2>1 · Choose firmware</h2>
+        <label class="radio"><input type="radio" name="source" value="release" checked> <span>Published release <em id="release-label">(checking...)</em></span></label>
+        <label class="radio"><input type="radio" name="source" value="local"> <span>Files from my own build</span></label>
+        <div id="local-pick" hidden>
+          <p class="hint">Select the images from your <code>build/</code> folder. Add <code>flasher_args.json</code> too and its offsets are used; otherwise the v3.7.1 layout from <code>partitions.csv</code> is assumed.</p>
+          <input type="file" id="local-files" multiple accept=".bin,.json">
+          <p class="hint warn">A <code>storage.bin</code> you built yourself contains <code>spiffs/openai_key.txt</code> if that file existed when you built it. That is fine for your own box; do not share the image.</p>
+        </div>
+        <table class="parts" aria-label="Images to write">
+          <thead><tr><th>Image</th><th>Offset</th><th>Size</th><th></th></tr></thead>
+          <tbody id="parts-body"><tr><td colspan="4" class="muted">No firmware selected yet.</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>2 · Write it</h2>
+        <label class="check"><input type="checkbox" id="opt-app-only"> <span><b>App only.</b> Writes just the program, keeping the voice clips and speech models already on the box. Quickest, but only safe when the partition layout has not changed.</span></label>
+        <label class="check"><input type="checkbox" id="opt-erase"> <span><b>Erase everything first.</b> Also deletes saved Wi-Fi, settings and the API key. Use it to start completely fresh.</span></label>
+        <button class="btn btn-red btn-wide" id="btn-flash" type="button" disabled>Install firmware</button>
+        <div class="progress" id="flash-progress" hidden>
+          <div class="progress-label"><span id="flash-step">Preparing</span><span id="flash-pct">0%</span></div>
+          <div class="progress-track"><div class="progress-fill" id="flash-fill"></div></div>
+        </div>
+        <p class="hint">The box restarts by itself when the write finishes, and the monitor opens so you can watch it boot. If connecting fails, hold <b>BOOT</b>, tap <b>RESET</b>, release <b>BOOT</b>, then try again.</p>
+        <details class="hint">
+          <summary>Going back to the factory demo</summary>
+          <p>Espressif publishes the stock ESP-BOX-3 firmware. Download its merged image, choose <b>Files from my own build</b>, pick that single file and it is written at offset 0x0. Or run <code>esptool.py --chip esp32s3 write_flash 0x0 &lt;file&gt;</code>.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Monitor ===================== -->
+  <section class="panel" id="panel-monitor" role="tabpanel" aria-labelledby="tab-monitor" hidden>
+    <div class="card term-card">
+      <div class="term-tools">
+        <input type="search" id="term-filter" placeholder="Filter lines" aria-label="Filter lines">
+        <label class="check-inline"><input type="checkbox" id="term-scroll" checked> Follow</label>
+        <label class="check-inline"><input type="checkbox" id="term-time"> Time</label>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" id="btn-reset" type="button" disabled>Reset box</button>
+        <button class="btn btn-ghost" id="btn-clear" type="button">Clear</button>
+        <button class="btn btn-ghost" id="btn-save" type="button">Save log</button>
+      </div>
+      <div class="term" id="term" role="log" aria-live="off" tabindex="0"></div>
+      <form class="term-send" id="term-form">
+        <input type="text" id="term-input" placeholder="Type a command, e.g. help" autocomplete="off" aria-label="Command" disabled>
+        <button class="btn btn-red" type="submit" id="term-send" disabled>Send</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== Control ===================== -->
+  <section class="panel" id="panel-control" role="tabpanel" aria-labelledby="tab-control" hidden>
+    <p class="notice small" id="console-missing">Controls need firmware with the serial console (added after v3.7.1). Connect the box; if nothing appears here, install the latest firmware first.</p>
+    <div class="grid3">
+      <div class="card">
+        <div class="card-head"><h2>Status</h2><button class="btn btn-ghost btn-sm" id="btn-status" type="button" disabled>Refresh</button></div>
+        <dl class="stats" id="stats"><dt>Firmware</dt><dd>UNKNOWN</dd></dl>
+      </div>
+      <div class="card">
+        <h2>Sound and screen</h2>
+        <label class="slider">Volume <output id="vol-out">UNKNOWN</output>
+          <input type="range" id="vol" min="0" max="100" step="5" disabled></label>
+        <label class="slider">Brightness <output id="bri-out">UNKNOWN</output>
+          <input type="range" id="bri" min="10" max="100" step="5" disabled></label>
+        <h2 class="mt">Kitchen timer</h2>
+        <div class="row">
+          <input type="number" id="timer-min" min="1" max="180" value="5" aria-label="Minutes">
+          <button class="btn btn-red btn-sm" id="btn-timer" type="button" disabled>Start</button>
+          <button class="btn btn-ghost btn-sm" id="btn-timer-cancel" type="button" disabled>Cancel</button>
+        </div>
+        <h2 class="mt">Box</h2>
+        <div class="row">
+          <button class="btn btn-ghost btn-sm" id="btn-selftest" type="button" disabled>Run self-test</button>
+          <button class="btn btn-ghost btn-sm" id="btn-reboot" type="button" disabled>Restart</button>
+        </div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+      <div class="card">
+        <div class="card-head"><h2>Say a phrase</h2></div>
+        <input type="search" id="phrase-filter" placeholder="Find a phrase" aria-label="Find a phrase">
+        <div class="pills" id="phrases"><span class="muted">Waiting for the box.</span></div>
+        <h2 class="mt">Make a face</h2>
+        <div class="pills" id="faces"><span class="muted">Waiting for the box.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p><b>Test status:</b> the flasher, monitor and controls are built on esptool-js and the Web Serial API and were checked in a browser without a box attached. Writing firmware and the console commands have <b>not yet been tested on a real ESP32-S3-BOX-3</b>.</p>
+    <p><a href="https://github.com/Normansrule/esp-box-voice-assistant">Source on GitHub</a> · <a href="https://github.com/Normansrule/esp-box-voice-assistant/releases">Releases and desktop app</a></p>
+  </footer>
+</main>
+
+<dialog id="port-dialog">
+  <form method="dialog">
+    <h2>Choose the box</h2>
+    <ul id="port-list" class="port-list"></ul>
+    <div class="row end"><button class="btn btn-ghost" value="cancel">Cancel</button></div>
+  </form>
+</dialog>
+
+</body>
+</html>
