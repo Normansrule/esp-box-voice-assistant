@@ -407,7 +407,7 @@
         <div class="lv-row">Room noise<select aria-label="Room noise"><option>Automatic</option><option>Quiet room</option><option>Noisy room</option></select></div>
         <div class="lv-section">ONLINE BRAIN (OPTIONAL)</div>
         <div class="lv-row">Answer any question${sw("cloud", settings.cloud, "Answer any question")}</div>
-        <div class="lv-row">When to ask<select data-sel="mode" aria-label="When to ask"><option value="0">Never</option><option value="1">Only when stuck</option><option value="2">Always</option></select></div>
+        <div class="lv-row">When to ask<select data-sel="mode" aria-label="When to ask"><option value="0">Never</option><option value="1">Only when stuck</option><option value="2">Always</option><option value="3">Home AI</option></select></div>
         <div class="lv-row">Limit per hour<select data-sel="limit" aria-label="Limit per hour"><option>10</option><option selected>30</option><option>60</option><option>120</option><option value="0">No limit</option></select></div>
         <div class="lv-row">API key<span class="v">Not set &middot; never stored here</span></div>
         <div class="lv-note">Off by default. Switching this on sends questions it does not recognise to OpenAI, which bills your account per question. In this simulator nothing is sent anywhere.</div>
@@ -467,6 +467,12 @@
     if (i.matched && i.confidence >= R.MIN_CONF) return ["ANSWER_OFFLINE", "A phrase matched confidently; a recognised command is never sent up."];
     if (!(i.recorded >= R.MIN_Q_S) || !(i.peak >= R.PEAK)) return ["NOTHING_HEARD", "Too short or too quiet to be a question."];
     if (i.mode === 0) return ["ANSWER_OFFLINE", "Mode is Never: everything stays on the chip."];
+    if (i.mode === 3) {
+      if (!i.homeReady) return ["ANSWER_OFFLINE", "Home AI is not set up (no address or no Wi-Fi), so it answers offline."];
+      if (i.speech < R.MIN_SPEECH) return ["ANSWER_OFFLINE", "Barely any speech in the recording."];
+      if (i.matched && i.confidence >= R.NEARLY) return ["ANSWER_OFFLINE", "Nearly matched a phrase: probably a command said badly."];
+      return ["ASK_HOME", "Ask the small AI on your own PC. Free, no account, no hourly limit."];
+    }
     if (!i.cloudReady) {
       if (i.mode === 1) return ["ANSWER_OFFLINE", "Cloud not ready; Only when stuck falls back to offline."];
       return ["DECLINE_NO_CLOUD", "Would ask, but the online brain is off or has no key."];
@@ -479,7 +485,7 @@
     if (i.allowed > 0 && i.used >= i.allowed) return ["DECLINE_BUDGET", "Hourly allowance spent; answers offline until the hour turns."];
     return ["ASK_CLOUD", "Worth one request."];
   }
-  const routerInputs = { matched: false, confidence: 0.03, recorded: 2.4, speech: 1.6, peak: 2400, cloudReady: true, used: 3 };
+  const routerInputs = { matched: false, confidence: 0.03, recorded: 2.4, speech: 1.6, peak: 2400, cloudReady: true, homeReady: true, used: 3 };
   function renderRouter() {
     const el = $("#router");
     if (!el) return;
@@ -487,11 +493,12 @@
       el.dataset.built = "1";
       el.innerHTML = `
         <div class="field"><label>When to ask <span class="tag-sim">sim</span></label><output id="r-mode"></output>
-          <input type="range" min="0" max="2" step="1" data-r="mode"><small>Never &middot; Only when stuck &middot; Always (also in the on-screen Settings)</small></div>
+          <input type="range" min="0" max="3" step="1" data-r="mode"><small>Never &middot; Only when stuck &middot; Always &middot; Home AI (also in the on-screen Settings)</small></div>
         <div class="field"><label>Recogniser confidence</label><output id="r-conf"></output><input type="range" min="0" max="0.3" step="0.01" data-r="confidence"></div>
         <div class="field"><label>Seconds recorded</label><output id="r-rec"></output><input type="range" min="0" max="10" step="0.1" data-r="recorded"></div>
         <div class="field"><label>Seconds of speech</label><output id="r-sp"></output><input type="range" min="0" max="10" step="0.05" data-r="speech"></div>
         <div class="field"><label>Peak amplitude</label><output id="r-pk"></output><input type="range" min="0" max="8000" step="50" data-r="peak"></div>
+        <div class="field"><label>Home AI ready (address set + Wi-Fi)</label><button class="lv-switch" role="switch" data-rh="homeReady" aria-label="Home AI ready"></button></div>
         <div class="field"><label>Cloud ready (switch on + key)</label><button class="lv-switch" role="switch" data-rs="cloudReady" aria-label="Cloud ready"></button></div>
         <div class="field"><label>Requests used this hour</label><output id="r-used"></output><input type="range" min="0" max="130" step="1" data-r="used"></div>
         <div class="verdict" id="r-verdict"></div>`;
@@ -502,11 +509,12 @@
           renderRouter();
         });
       });
+      $("[data-rh]", el).addEventListener("click", () => { routerInputs.homeReady = !routerInputs.homeReady; renderRouter(); });
       $("[data-rs]", el).addEventListener("click", (e) => { routerInputs.cloudReady = !routerInputs.cloudReady; renderRouter(); });
     }
     const i = Object.assign({}, routerInputs, { mode: settings.mode, allowed: settings.limit,
       matched: routerInputs.confidence > 0 });
-    $("#r-mode").textContent = ["Never", "Only when stuck", "Always"][settings.mode];
+    $("#r-mode").textContent = ["Never", "Only when stuck", "Always", "Home AI"][settings.mode];
     $("[data-r=mode]").value = settings.mode;
     $("#r-conf").textContent = i.confidence.toFixed(2);
     $("#r-rec").textContent = i.recorded.toFixed(1) + " s";
@@ -514,6 +522,7 @@
     $("#r-pk").textContent = i.peak;
     $("#r-used").textContent = i.used + " / " + (i.allowed || "no limit");
     $("[data-rs]").setAttribute("aria-checked", i.cloudReady);
+    $("[data-rh]").setAttribute("aria-checked", i.homeReady);
     const [route, why] = routerDecide(i);
     $("#r-verdict").innerHTML = `<b>VOICE_ROUTE_${route}</b><br>${why}`;
   }
