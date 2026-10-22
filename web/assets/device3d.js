@@ -48,8 +48,8 @@ async function start() {
   scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  camera.position.set(0, 0.3, 10.4);
-  camera.lookAt(0, -0.35, 0);
+  camera.position.set(0, 0.5, 7.3);
+  camera.lookAt(0, -0.3, 0);
 
   const RED = new THREE.Color("#E8362D");
   const shell = new THREE.MeshPhysicalMaterial({ color: "#f4f4f6", roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.25 });
@@ -96,6 +96,15 @@ async function start() {
   const led = new THREE.Mesh(new THREE.CircleGeometry(0.045, 20), new THREE.MeshBasicMaterial({ color: RED }));
   led.position.set(1.25, -1.68, 0.656);
   device.add(led);
+
+  const port = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.12, 0.2, 4, 0.05),
+    new THREE.MeshStandardMaterial({ color: "#2a2b2f", roughness: 0.4 }));
+  port.position.set(0, -1.36, 0.1);
+  device.add(port);
+  const strip = new THREE.Mesh(new RoundedBoxGeometry(2.6, 0.2, 0.02, 4, 0.06), glass);
+  strip.position.set(0, -1.66, 0.66);
+  device.add(strip);
+  led.position.z = 0.68;
 
   /* Soft contact shadow. */
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.14 }));
@@ -148,7 +157,7 @@ async function start() {
     dragY += (spin - dragY) * 0.1;
     const enter = reduce ? 1 : Math.min(1, t / 1.6);
     const e = 1 - Math.pow(1 - enter, 4);
-    device.rotation.y = (-0.55 + targetY) * (1 - e) + (targetY - 0.32) * e + dragY + (reduce ? 0 : Math.sin(t * 0.5) * 0.05);
+    device.rotation.y = (-0.9 + targetY) * (1 - e) + (targetY * 0.6 - 0.16) * e + dragY + (reduce ? 0 : Math.sin(t * 0.5) * 0.05);
     device.rotation.x = targetX * 0.6 + (reduce ? 0 : Math.sin(t * 0.7) * 0.02);
     device.position.y = (reduce ? 0 : Math.sin(t * 0.9) * 0.06) - (1 - e) * 0.6;
     texture.needsUpdate = true;

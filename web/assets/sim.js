@@ -768,15 +768,39 @@
     navCheck();
   }
 
-  /* A second, chrome-free screen that the hero renders (3D texture or 2D). */
+  /*
+   * The hero's screen: the full UI (gear, captions) on the 3D device, replaying
+   * real exchanges from the reply table on a loop. No sensor chip, so nothing
+   * on the landing page looks like a reading. Silent: audio only plays in the
+   * simulator, after the visitor asks for it.
+   */
   const heroCanvas = document.createElement("canvas");
-  heroCanvas.width = 640; heroCanvas.height = 480;
-  const hero = new Screen(heroCanvas, { chrome: false });
-  setInterval(() => {
-    if (hero.anim.antic) return;
-    const pool = ["happy", "curious", "wink", "love", "starry", "playful", "giggly", "cosy", "neutral", "neutral"];
-    hero.anim.flashEmotion(pool[Math.floor(Math.random() * pool.length)], 1800);
-  }, 4200);
+  heroCanvas.width = 960; heroCanvas.height = 720;
+  const hero = new Screen(heroCanvas, { chrome: true });
+  const DEMO = ["hello buddy", "tell me a joke", "give me a wink", "how are you doing", "tell me a fact",
+    "look totally amazed", "read my fortune", "act all shy now", "celebrate with me"];
+  let demoIndex = 0;
+  async function heroDemo() {
+    for (;;) {
+      await wait(2600);
+      if (document.hidden || hero.anim.antic) continue;
+      const cmd = FW.commands.find((c) => c.phrase === DEMO[demoIndex++ % DEMO.length]);
+      const reply = cmd && FW.replies[cmd.action];
+      if (!reply || reply.runtime) continue;
+      hero.anim.setEmotion("listening");
+      hero.caption("status", "Listening...", 1300);
+      await wait(1400);
+      hero.caption("user", cmd.phrase, 1500);
+      await wait(1500);
+      const line = reply.lines[Math.floor(Math.random() * reply.lines.length)];
+      hero.anim.setEmotion(reply.emotion);
+      hero.caption("buddy", line.text, Math.max(2600, line.text.length * 55));
+      await wait(Math.max(2600, line.text.length * 55) + 300);
+      hero.anim.setEmotion("neutral");
+      await wait(2200);
+    }
+  }
+  if (!reduceMotion) heroDemo();
 
   /* ---------------------------------------------------------------------- */
   /* Boot                                                                    */

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=2">
+<link rel="stylesheet" href="assets/style.css?v=3">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -30,6 +30,8 @@
       <a href="#faces">Faces</a>
       <a href="#listen">Voice</a>
       <a href="#simulator">Simulator</a>
+      <a href="#buy">Buy</a>
+      <a href="connect/">Connect</a>
       <a href="#status">Status</a>
       <a href="https://github.com/Normansrule/esp-box-voice-assistant">GitHub</a>
     </div>
@@ -37,23 +39,28 @@
   </div>
 </nav>
 
-<header class="hero" id="top">
-  <div class="wrap hero-grid">
-    <div>
-      <p class="eyebrow fade-up">ESP32-S3-BOX-3 &middot; Desk Buddy firmware <span data-fw="version"></span></p>
-      <h1 class="display"><span>Hi</span> <span class="grad">E.S.P.</span></h1>
-      <p class="sub fade-up" style="margin-top:22px">A voice assistant with a face. It hears its wake word on the chip, answers <span data-count="commands"></span> phrases offline, and only asks the cloud when you let it.</p>
-      <div class="btns fade-up">
-        <a class="btn btn-red" href="#simulator">Try the simulator</a>
-        <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
-      </div>
-    </div>
-    <div class="stage" id="hero-stage">
-      <div class="fallback-device"><canvas id="hero-fallback" width="640" height="480" aria-hidden="true"></canvas></div>
-      <p class="stage-note">Rendered in your browser from the firmware's face tables. Drag to turn.</p>
+<header class="hero product" id="top">
+  <div class="wrap hero-head">
+    <p class="eyebrow fade-up">ESP32-S3-BOX-3 &middot; Desk Buddy firmware <span data-fw="version"></span></p>
+    <h1 class="display"><span>Hi</span> <span class="grad">E.S.P.</span></h1>
+    <p class="sub fade-up">A voice assistant with a face. It hears its wake word on the chip, answers <span data-count="commands"></span> phrases offline, and only asks the cloud when you let it.</p>
+  </div>
+  <div class="stage product-stage" id="hero-stage">
+    <div class="fallback-device"><canvas id="hero-fallback" width="640" height="480" aria-hidden="true"></canvas></div>
+    <div class="hotspots" aria-hidden="true">
+      <span class="hs hs-screen"><b>2.4&Prime; 320&times;240 touch</b>LVGL face, drawn from shapes</span>
+      <span class="hs hs-mic"><b>Two microphones</b>Wake word on the chip</span>
+      <span class="hs hs-dock"><b>BOX-3-SENSOR dock</b>Temperature, humidity, radar</span>
     </div>
   </div>
-  <div class="scroll-cue" aria-hidden="true">Scroll<i></i></div>
+  <div class="wrap hero-foot">
+    <div class="btns fade-up">
+      <a class="btn btn-red" href="#buy">Get the hardware</a>
+      <a class="btn btn-ghost" href="#simulator">Try the simulator</a>
+      <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
+    </div>
+    <p class="stage-note">Illustration of the ESP32-S3-BOX-3 on its sensor dock. The screen is a live browser simulation of the firmware, replaying real offline replies. Drag to turn, click to poke.</p>
+  </div>
 </header>
 
 <section id="faces" class="morph" aria-label="Expressions">
@@ -161,6 +168,24 @@
   </div>
 </section>
 
+<section id="buy" class="pad buy">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Build your own</p>
+      <h2 class="headline">Get the hardware.<br><span class="grad">Flash the face.</span></h2>
+      <p class="sub">Everything on this page runs on one off-the-shelf Espressif kit. No soldering, no custom board.</p>
+    </div>
+    <div class="kits" id="kits"></div>
+    <ol class="steps reveal">
+      <li><b>Buy a BOX-3.</b> The full kit if you want the temperature readout and the &ldquo;someone sat down&rdquo; radar; the bare 3B otherwise.</li>
+      <li><b>Install ESP-IDF v5.5.x.</b> Not v6. The Windows offline installer is the easy path.</li>
+      <li><b>Build and flash.</b> <code>idf.py set-target esp32s3</code>, <code>idf.py build</code>, <code>idf.py -p PORT flash</code>. Say &ldquo;Hi E.S.P.&rdquo;</li>
+    </ol>
+    <p class="disclosure" id="disclosure"></p>
+    <p class="fineprint">Store links come from Espressif's own list of official sellers on the <a href="https://www.espressif.com/en/dev-board/esp32-s3-box-3-en">ESP32-S3-BOX-3 product page</a>. Prices and stock change; check the store. The 18650 slot on BOX-3-SENSOR is Espressif's design; this firmware does not measure the battery yet, so use a protected cell and follow Espressif's charging instructions.</p>
+  </div>
+</section>
+
 <section class="pad" style="padding-top:0">
   <div class="wrap">
     <div class="center reveal">
@@ -217,9 +242,10 @@
   </div>
 </footer>
 
-<script src="assets/firmware-data.js?v=2"></script>
-<script src="assets/face.js?v=2"></script>
-<script src="assets/sim.js?v=2"></script>
-<script type="module" src="assets/device3d.js?v=2"></script>
+<script src="assets/firmware-data.js?v=3"></script>
+<script src="assets/face.js?v=3"></script>
+<script src="assets/sim.js?v=3"></script>
+<script src="assets/shop.js?v=3"></script>
+<script type="module" src="assets/device3d.js?v=3"></script>
 </body>
 </html>
