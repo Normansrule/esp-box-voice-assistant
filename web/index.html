@@ -56,6 +56,7 @@
   <div class="wrap hero-foot">
     <div class="btns fade-up">
       <a class="btn btn-red" href="#buy">Get the hardware</a>
+      <a class="btn btn-ghost" href="connect/">Install in your browser</a>
       <a class="btn btn-ghost" href="#simulator">Try the simulator</a>
       <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
     </div>
@@ -178,8 +179,8 @@
     <div class="kits" id="kits"></div>
     <ol class="steps reveal">
       <li><b>Buy a BOX-3.</b> The full kit if you want the temperature readout and the &ldquo;someone sat down&rdquo; radar; the bare 3B otherwise.</li>
-      <li><b>Install ESP-IDF v5.5.x.</b> Not v6. The Windows offline installer is the easy path.</li>
-      <li><b>Build and flash.</b> <code>idf.py set-target esp32s3</code>, <code>idf.py build</code>, <code>idf.py -p PORT flash</code>. Say &ldquo;Hi E.S.P.&rdquo;</li>
+      <li><b>Only building from source?</b> Install ESP-IDF v5.5.x, not v6. The browser installer in step 3 needs nothing installed.</li>
+      <li><b>Install it.</b> Plug in over USB-C and <a href="connect/">install from your browser</a>, or build it yourself: <code>idf.py build</code>, <code>idf.py -p PORT flash</code>. Then say &ldquo;Hi E.S.P.&rdquo;</li>
     </ol>
     <p class="disclosure" id="disclosure"></p>
     <p class="fineprint">Store links come from Espressif's own list of official sellers on the <a href="https://www.espressif.com/en/dev-board/esp32-s3-box-3-en">ESP32-S3-BOX-3 product page</a>. Prices and stock change; check the store. The 18650 slot on BOX-3-SENSOR is Espressif's design; this firmware does not measure the battery yet, so use a protected cell and follow Espressif's charging instructions.</p>
