@@ -99,6 +99,16 @@ void face_view_set_vertical_shift(int16_t pixels, uint16_t duration_ms);
  */
 void face_view_set_hidden(bool hidden);
 
+/**
+ * @brief Nudge where the eyes look, on top of whatever the pose says.
+ *
+ * Used by the motion sensor: the eyes drift towards the way the box is
+ * leaning. Units are the pose's look_x/look_y (-100..100); the sum with the
+ * pose is clamped. Applied immediately, with no animation of its own; call it
+ * at a steady rate for smooth movement.
+ */
+void face_view_set_gaze_bias(int16_t look_x, int16_t look_y);
+
 #ifdef __cplusplus
 }
 #endif

@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=6">
+<link rel="stylesheet" href="assets/style.css?v=7">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -30,6 +30,7 @@
       <a href="#faces">Faces</a>
       <a href="#listen">Voice</a>
       <a href="#simulator">Simulator</a>
+      <a href="#inside">Inside</a>
       <a href="#buy">Buy</a>
       <a href="connect/">Connect</a>
       <a href="#status">Status</a>
@@ -126,6 +127,7 @@
       <div class="panel">
         <div class="tabs" role="tablist" aria-label="Simulator controls">
           <button class="tab" role="tab" aria-selected="true" aria-controls="tab-talk" id="t-talk">Talk</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="tab-motion" id="t-motion">Tilt &amp; battery</button>
           <button class="tab" role="tab" aria-selected="false" aria-controls="tab-faces" id="t-faces">Faces</button>
           <button class="tab" role="tab" aria-selected="false" aria-controls="tab-sensors" id="t-sensors">Sensors</button>
           <button class="tab" role="tab" aria-selected="false" aria-controls="tab-brain" id="t-brain">Online brain</button>
@@ -137,6 +139,27 @@
           <p class="hint">Then pick what you say. Solid chips answer from fixed replies in <code>voice_local_brain.c</code> and play the matching clip from <code>spiffs/voice/</code>. Dashed chips are answers the device builds at runtime (the time, the temperature, a sum); the simulator shows them as such rather than make one up.</p>
           <input class="search" id="phrase-search" type="search" placeholder="Search <n> offline phrases" aria-label="Search offline phrases">
           <div class="phrases" id="phrases"></div>
+        </div>
+
+        <div class="tabpanel" role="tabpanel" id="tab-motion" aria-labelledby="t-motion" hidden>
+          <p class="hint">The BOX-3 has a motion sensor inside (an ICM-42607-P, per Espressif's BSP). The firmware tilts the eyes towards the low side, gets dizzy when shaken and surprised when picked up. Here you play the sensor: <b>drag the dot</b>, use the arrow keys, or tilt your phone. <span class="tag-sim">sim input</span></p>
+          <div class="motion-grid">
+            <div class="tilt-pad" id="tilt-pad" tabindex="0" role="application" aria-label="Tilt pad: drag, or use the arrow keys">
+              <i class="tilt-cross" aria-hidden="true"></i><span class="tilt-knob" id="tilt-knob"></span>
+              <span class="tilt-label" aria-hidden="true">tilt</span>
+            </div>
+            <div class="motion-actions">
+              <output id="tilt-out" class="tilt-out">0°, 0°</output>
+              <button class="btn btn-red" id="shake" type="button">Shake it</button>
+              <button class="btn btn-ghost" id="pickup" type="button">Pick it up</button>
+              <button class="btn btn-ghost" id="setdown" type="button">Put it down</button>
+              <button class="btn btn-ghost" id="phone-tilt" type="button">Use my phone's tilt</button>
+            </div>
+          </div>
+          <div class="field"><label for="batt">18650 battery <span class="tag-sim">sim input</span></label><output id="batt-out"></output>
+            <input id="batt" type="range" min="3300" max="4200" step="10" value="3980">
+            <small>On the box, the dock divides the cell voltage by 4.01 into GPIO10. The firmware averages 64 ADC samples and turns volts into a <b>~percent estimate</b>. The charger only lights LEDs, so &ldquo;charging&rdquo; cannot be read. Below <span data-fw="batt-low"></span> it warns you once.</small></div>
+          <p class="hint" style="margin-top:12px"><span class="badge b-impl">In firmware</span> <span class="badge b-plan">Untested on device</span> Real logs come from <code>tools/collect_hw_log.py</code>.</p>
         </div>
 
         <div class="tabpanel" role="tabpanel" id="tab-faces" aria-labelledby="t-faces" hidden>
@@ -152,8 +175,7 @@
           <div class="field"><label for="hum">Humidity <span class="tag-sim">sim input</span></label><output id="hum-out"></output><input id="hum" type="range" min="10" max="90" step="1" value="44"></div>
           <div class="field"><label for="dock">Sensor dock attached <span class="tag-sim">sim input</span></label><button class="lv-switch" id="dock" role="switch" aria-checked="true" aria-label="Sensor dock attached"></button><small>Without the dock the firmware hides the readout and says so politely when asked.</small></div>
           <div class="field"><label>Someone sits down <span class="tag-sim">sim input</span></label><button class="btn btn-ghost" id="arrive" style="padding:8px 14px;font-size:14px">Trigger presence</button><small>The radar's "arrived" event: the buddy looks up, quietly, with no chime.</small></div>
-          <div class="field"><label>Battery</label><span class="tag-na">Not in firmware</span><small>v<span data-fw="version"></span> has no battery measurement. The simulator shows nothing rather than invent a number. See the roadmap.</small></div>
-          <div class="field"><label>Motion (IMU)</label><span class="tag-na">Not in firmware</span><small>The BOX-3's onboard ICM42670 is not read by this firmware yet. No fake axes.</small></div>
+          <div class="field"><label>Battery and motion</label><span class="tag-sim">sim input</span><small>Now in the firmware (untested on device). Try them in the <b>Tilt &amp; battery</b> tab.</small></div>
         </div>
 
         <div class="tabpanel" role="tabpanel" id="tab-brain" aria-labelledby="t-brain" hidden>
@@ -188,6 +210,17 @@
   </div>
 </section>
 
+<section id="inside" class="pad inside">
+  <div class="wrap">
+    <div class="center reveal">
+      <p class="eyebrow">Inside the box</p>
+      <h2 class="headline">What the BOX-3<br>is made of.</h2>
+      <p class="sub">Tap a part. Every fact here comes from Espressif's BSP or schematics, and says where.</p>
+    </div>
+    <div class="parts" id="parts"></div>
+  </div>
+</section>
+
 <section class="pad" style="padding-top:0">
   <div class="wrap">
     <div class="center reveal">
@@ -216,8 +249,8 @@
           <tr><td>Optional online brain (OpenAI)</td><td><span class="badge b-impl">In firmware</span></td><td>Off by default; key never in this repository.</td></tr>
           <tr><td>Temperature, humidity, presence</td><td><span class="badge b-impl">In firmware</span></td><td>Sensor dock only. Simulated on this page.</td></tr>
           <tr><td>Host unit tests</td><td><span class="badge b-plan">Run in CI</span></td><td><code>scripts/run_tests.py</code> needs a desktop C compiler; CI runs it on Ubuntu.</td></tr>
-          <tr><td>Battery monitoring</td><td><span class="badge b-plan">Planned</span></td><td>Needs a verified battery accessory and voltage sense first.</td></tr>
-          <tr><td>IMU gestures (ICM42670)</td><td><span class="badge b-plan">Planned</span></td><td>Onboard sensor per the official BSP; not read yet.</td></tr>
+          <tr><td>Battery voltage (BOX-3-SENSOR, GPIO10)</td><td><span class="badge b-impl">In firmware</span> <span class="badge b-plan">Untested on device</span></td><td>Divider R15 301k / R16 100k from Espressif's SENSOR-01 V1.1 schematic. Percent is an estimate; charging is not visible to the ESP32.</td></tr>
+          <tr><td>Motion: tilt gaze, shake, pick up (ICM-42607-P)</td><td><span class="badge b-impl">In firmware</span> <span class="badge b-plan">Untested on device</span></td><td><code>main/hardware/hw_imu.c</code>, 50 Hz. Axis directions and thresholds wait for real logs.</td></tr>
           <tr><td>This web simulator</td><td><span class="badge b-sim">Simulation</span></td><td>Runs in the browser. Never shows device data.</td></tr>
         </tbody>
       </table>
@@ -244,10 +277,11 @@
   </div>
 </footer>
 
-<script src="assets/firmware-data.js?v=6"></script>
-<script src="assets/face.js?v=6"></script>
-<script src="assets/sim.js?v=6"></script>
-<script src="assets/shop.js?v=6"></script>
-<script type="module" src="assets/device3d.js?v=6"></script>
+<script src="assets/firmware-data.js?v=7"></script>
+<script src="assets/face.js?v=7"></script>
+<script src="assets/sim.js?v=7"></script>
+<script src="assets/shop.js?v=7"></script>
+<script src="assets/parts.js?v=7"></script>
+<script type="module" src="assets/device3d.js?v=7"></script>
 </body>
 </html>

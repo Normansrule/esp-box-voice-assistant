@@ -11,6 +11,7 @@
 #include "buddy_config.h"
 #include "buddy_settings.h"
 #include "face_theme.h"
+#include "hw_battery.h"
 #include "hw_sensors.h"
 #include "ui_sensor_readout.h"
 
@@ -19,6 +20,7 @@ static const char *TAG = "ui_readout";
 static lv_obj_t   *s_chip;
 static lv_obj_t   *s_temperature_label;
 static lv_obj_t   *s_humidity_label;
+static lv_obj_t   *s_battery_label;
 static lv_timer_t *s_refresh_timer;
 
 /**
@@ -71,6 +73,27 @@ void ui_sensor_readout_refresh(void)
 
     snprintf(text, sizeof(text), "%d%%", (int)(reading.humidity_percent + 0.5f));
     lv_label_set_text(s_humidity_label, text);
+
+    /*
+     * The battery: measured voltage, ESTIMATED charge. The "~" is the honest
+     * part - see hw_battery.h for why the percentage is only a guess.
+     */
+    const hw_battery_reading_t battery = hw_battery_read();
+    if (battery.available) {
+        const char *symbol = (battery.percent_est >= 80) ? LV_SYMBOL_BATTERY_FULL
+                           : (battery.percent_est >= 55) ? LV_SYMBOL_BATTERY_3
+                           : (battery.percent_est >= 30) ? LV_SYMBOL_BATTERY_2
+                           : (battery.percent_est >= 10) ? LV_SYMBOL_BATTERY_1
+                           : LV_SYMBOL_BATTERY_EMPTY;
+        snprintf(text, sizeof(text), "%s ~%u%%", symbol, battery.percent_est);
+        lv_label_set_text(s_battery_label, text);
+        lv_obj_set_style_text_color(s_battery_label,
+                                    battery.low ? FACE_COLOR_ESPRESSIF_RED : FACE_COLOR_TEXT_MUTED,
+                                    LV_PART_MAIN);
+        lv_obj_clear_flag(s_battery_label, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_battery_label, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 esp_err_t ui_sensor_readout_create(lv_obj_t *parent)
@@ -116,6 +139,11 @@ esp_err_t ui_sensor_readout_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_humidity_label, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_humidity_label, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_label_set_text(s_humidity_label, "--%");
+
+    s_battery_label = lv_label_create(s_chip);
+    lv_obj_set_style_text_color(s_battery_label, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_battery_label, &lv_font_montserrat_14, LV_PART_MAIN);
+    lv_obj_add_flag(s_battery_label, LV_OBJ_FLAG_HIDDEN);
 
     /* Hidden until the first believable reading arrives. */
     lv_obj_add_flag(s_chip, LV_OBJ_FLAG_HIDDEN);

@@ -49,6 +49,7 @@ EXTERNAL_HEADERS = {
     "bsp_board.h",
     "iot_button.h",
     "model_path.h",
+    "icm42670.h",       # espressif/icm42670, pulled in by the BOX-3 BSP
 }
 
 

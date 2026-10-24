@@ -47,6 +47,13 @@ window.FIRMWARE = {
   "BUDDY_LISTEN_WINDOW_MS": 6000,
   "BUDDY_DEFAULT_REQUESTS_PER_HOUR": 30,
   "BUDDY_SENSOR_REFRESH_MS": 3000,
+  "BUDDY_IMU_RATE_HZ": 50,
+  "BUDDY_IMU_SHAKE_G": 0.9,
+  "BUDDY_IMU_SHAKE_PEAKS": 3,
+  "BUDDY_IMU_SHAKE_WINDOW_MS": 900,
+  "BUDDY_IMU_PICKUP_DEG": 28.0,
+  "BUDDY_IMU_GAZE_PER_DEG": 4,
+  "BUDDY_BATTERY_LOW_MV": 3450,
   "EYE_SHUT_HEIGHT": 16,
   "EYE_SHUT_CRESCENT": 9,
   "BROW_BASELINE_Y": 22,
@@ -3465,5 +3472,55 @@ window.FIRMWARE = {
    "runtime": true
   }
  },
+ "battery_curve": [
+  [
+   4200,
+   100
+  ],
+  [
+   4100,
+   90
+  ],
+  [
+   4000,
+   80
+  ],
+  [
+   3920,
+   70
+  ],
+  [
+   3850,
+   60
+  ],
+  [
+   3790,
+   50
+  ],
+  [
+   3750,
+   40
+  ],
+  [
+   3710,
+   30
+  ],
+  [
+   3670,
+   20
+  ],
+  [
+   3610,
+   10
+  ],
+  [
+   3500,
+   5
+  ],
+  [
+   3300,
+   0
+  ]
+ ],
  "voice_clip_count": 356
 };

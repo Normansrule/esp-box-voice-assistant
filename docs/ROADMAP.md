@@ -11,8 +11,10 @@ Nothing moves to "verified on device" without serial logs or measurements commit
 | 2 Bring-up | Firmware builds on ESP-IDF v5.5.5 | VERIFIED BUILD |
 | 2 Bring-up | Flash, boot self-test log, touch, mic, speaker on this repo's build | UNTESTED |
 | 3 Offline voice | Wake word, 125 phrases, offline clips, mute switch | in firmware, UNTESTED for this repo |
-| 4 Portable UX | Battery voltage (only if a sense line exists), "estimated" percentage, low-battery alert, sleep profiles | PLANNED |
-| 4 Portable UX | IMU telemetry at 50 Hz, calibration, tilt / shake / double-tap with false-trigger suppression | PLANNED |
+| 4 Portable UX | Battery voltage via GPIO10 (verified sense line on SENSOR-01 V1.1), estimated percentage, low-battery alert | IN FIRMWARE, UNTESTED ON DEVICE |
+| 4 Portable UX | Sleep profiles, battery-life measurements | PLANNED |
+| 4 Portable UX | IMU at 50 Hz, rest-pose zeroing, tilt gaze, shake, pick-up/set-down | IN FIRMWARE, UNTESTED ON DEVICE |
+| 4 Portable UX | Double-tap, sensitivity settings, false-trigger tuning from logs | PLANNED |
 | 4 Portable UX | Developer screen: heap/PSRAM, audio drops, reset reason, IMU ID, power; UNKNOWN when unavailable | PLANNED |
 | 5 Optional AI | Consent screen before any audio leaves the device; visible cloud indicator | PLANNED |
 | 5 Optional AI | Move from a device-held OpenAI key to a user-owned backend so no service secret lives in flash | PLANNED |

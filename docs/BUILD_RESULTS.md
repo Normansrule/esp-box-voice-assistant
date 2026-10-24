@@ -29,3 +29,14 @@ idf.py set-target esp32s3
 idf.py build
 idf.py size
 ```
+
+## 2026-10-24 · motion sensor and battery added
+
+| Item | Result |
+| --- | --- |
+| ESP-IDF | v5.5.5, same toolchain as above |
+| Result | **Build passed** with `hw_imu.c`, `hw_battery.c`, `buddy_motion.c` |
+| App image | 0x1e5d90 bytes (1,990,032), 46% of the app partition free |
+| New warnings | none from these files (one pre-existing `-Wunused-function` in `voice_cloud_brain.c`) |
+| `scripts/check_sources.py` | passed |
+| On device | **not run**: waiting for `tools/collect_hw_log.py` logs (docs/HARDWARE_TESTS.md) |

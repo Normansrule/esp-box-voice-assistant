@@ -586,3 +586,41 @@
  * request deadline. With it, the box knows within about a second and says so.
  */
 #define BUDDY_HOME_BRAIN_PROBE_TIMEOUT_MS 1500
+
+/* ------------------------------------------------------------------------ */
+/* Motion (hw_imu.c) and battery (hw_battery.c)                              */
+/*                                                                           */
+/* UNTESTED ON DEVICE: every number below is a starting point to be checked  */
+/* against logs from a real box (docs/HARDWARE_TESTS.md).                    */
+/* ------------------------------------------------------------------------ */
+
+/** IMU sample rate. 50 Hz is plenty for gestures and leaves the I2C bus quiet. */
+#define BUDDY_IMU_RATE_HZ               50
+
+/** Below the voice tasks, above nothing that matters. */
+#define BUDDY_IMU_TASK_PRIORITY         3
+
+/** A "jolt" is |acceleration| straying this far from 1 g. */
+#define BUDDY_IMU_SHAKE_G               0.9f
+
+/** This many jolts inside the window make a shake. */
+#define BUDDY_IMU_SHAKE_PEAKS           3
+#define BUDDY_IMU_SHAKE_WINDOW_MS       900
+
+/** Leaning further than this from the resting pose for half a second = picked up. */
+#define BUDDY_IMU_PICKUP_DEG            28.0f
+
+/**
+ * How far the eyes follow a lean: look_x/look_y units (-100..100) per degree.
+ * At 4, a 25 degree lean takes the eyes to their limit.
+ */
+#define BUDDY_IMU_GAZE_PER_DEG          4
+
+/** How often the gaze follows the lean. 10 Hz keeps the LVGL lock quiet. */
+#define BUDDY_IMU_GAZE_REFRESH_MS       100
+
+/** Below this the buddy says the battery is low (once per discharge). */
+#define BUDDY_BATTERY_LOW_MV            3450
+
+/** How often the battery is measured and logged. */
+#define BUDDY_BATTERY_REFRESH_MS        10000

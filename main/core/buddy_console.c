@@ -30,7 +30,9 @@
 #include "buddy_settings.h"
 #include "buddy_timer.h"
 #include "face_emotions.h"
+#include "hw_battery.h"
 #include "hw_display.h"
+#include "hw_imu.h"
 #include "hw_sensors.h"
 #include "hw_speaker.h"
 #include "net_wifi.h"
@@ -184,6 +186,82 @@ static void command_status(const char *argument)
         printf(",\"temperature_c\":%.1f,\"humidity\":%.1f",
                (double)reading.temperature_celsius, (double)reading.humidity_percent);
     }
+
+    printf(",\"imu\":");
+    print_json_string(hw_imu_chip_name());
+    const hw_battery_reading_t battery = hw_battery_read();
+    if (battery.available) {
+        printf(",\"battery_mv\":%u,\"battery_pct_est\":%u",
+               (unsigned)battery.battery_mv, (unsigned)battery.percent_est);
+    }
+    end_reply();
+}
+
+/*
+ * motion                one reading
+ * motion stream [n]     CSV lines "IMU,..." every n-th sample (default 5 = 10 Hz)
+ * motion stop           stop streaming
+ * motion zero           treat the current pose as level
+ *
+ * UNTESTED ON DEVICE.
+ */
+static void command_motion(const char *argument)
+{
+    if (!hw_imu_is_present()) {
+        reply_error("motion", "no IMU answered on the I2C bus");
+        return;
+    }
+    if (argument != NULL && strncasecmp(argument, "stream", 6) == 0) {
+        const int every = atoi(argument + 6);
+        hw_imu_set_stream(true, (uint16_t)((every > 0) ? every : 5));
+        begin_reply("motion", true);
+        printf(",\"stream\":true,\"format\":\"IMU,ms,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,tilt_x_deg,tilt_y_deg,temp_c\"");
+        end_reply();
+        return;
+    }
+    if (argument != NULL && strcasecmp(argument, "stop") == 0) {
+        hw_imu_set_stream(false, 5);
+        begin_reply("motion", true);
+        printf(",\"stream\":false");
+        end_reply();
+        return;
+    }
+    if (argument != NULL && strcasecmp(argument, "zero") == 0) {
+        hw_imu_zero();
+        begin_reply("motion", true);
+        printf(",\"zeroing\":true");
+        end_reply();
+        return;
+    }
+
+    const hw_imu_sample_t s = hw_imu_latest();
+    begin_reply("motion", s.valid);
+    printf(",\"chip\":");
+    print_json_string(hw_imu_chip_name());
+    printf(",\"who_am_i\":%u", (unsigned)hw_imu_chip_id());
+    if (s.valid) {
+        printf(",\"accel_g\":[%.3f,%.3f,%.3f],\"gyro_dps\":[%.1f,%.1f,%.1f]"
+               ",\"tilt_deg\":[%.1f,%.1f],\"temp_c\":%.1f",
+               (double)s.accel_g[0], (double)s.accel_g[1], (double)s.accel_g[2],
+               (double)s.gyro_dps[0], (double)s.gyro_dps[1], (double)s.gyro_dps[2],
+               (double)s.tilt_x_deg, (double)s.tilt_y_deg, (double)s.temp_c);
+    }
+    end_reply();
+}
+
+/* battery: one averaged reading. UNTESTED ON DEVICE. */
+static void command_battery(const char *argument)
+{
+    (void)argument;
+    const hw_battery_reading_t b = hw_battery_read();
+    if (!b.available) {
+        reply_error("battery", "no reading: needs the BOX-3-SENSOR dock (IO10)");
+        return;
+    }
+    begin_reply("battery", true);
+    printf(",\"pin_mv\":%u,\"battery_mv\":%u,\"percent_est\":%u,\"low\":%s"
+           ",\"note\":\"percent is estimated from voltage; charging is not visible to the ESP32\"",
+           (unsigned)b.pin_mv, (unsigned)b.battery_mv, (unsigned)b.percent_est, b.low ? "true" : "false");
     end_reply();
 }
 
@@ -397,6 +475,8 @@ static const console_command_t s_commands[] = {
     { "volume",     command_volume,     "volume <0-100>" },
     { "brightness", command_brightness, "brightness <10-100>" },
     { "timer",      command_timer,      "timer <minutes> | timer cancel" },
+    { "motion",     command_motion,     "motion [stream [n] | stop | zero]" },
+    { "battery",    command_battery,    "battery" },
     { "reboot",     command_reboot,     "reboot" },
     { "help",       command_help,       "help" },
 };

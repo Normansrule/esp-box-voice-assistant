@@ -17,6 +17,7 @@ idf_component_register(
         "core/buddy_presence.c"
         "core/buddy_selftest.c"
         "core/buddy_console.c"
+        "core/buddy_motion.c"
 
         # Talking to the hardware
         "hardware/hw_display.c"
@@ -24,6 +25,8 @@ idf_component_register(
         "hardware/hw_microphone.c"
         "hardware/hw_sensors.c"
         "hardware/hw_buttons.c"
+        "hardware/hw_imu.c"
+        "hardware/hw_battery.c"
 
         # Wi-Fi and the clock
         "net/net_wifi.c"

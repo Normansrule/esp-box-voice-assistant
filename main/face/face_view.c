@@ -90,6 +90,10 @@ static face_pose_t s_pose_to;
 /** Extra vertical offset applied on top of the pose (speech-bubble lift). */
 static int16_t s_vertical_shift;
 
+/** Extra gaze on top of the pose, from the motion sensor (look units). */
+static int16_t s_gaze_bias_x;
+static int16_t s_gaze_bias_y;
+
 /*
  * The last values actually pushed into LVGL.
  *
@@ -479,16 +483,22 @@ void face_view_apply_pose(const face_pose_t *pose)
      */
     static face_pose_t s_last_applied;
     static int16_t     s_last_shift;
+    static int16_t     s_last_bias_x;
+    static int16_t     s_last_bias_y;
     static bool        s_have_applied;
 
     if (s_have_applied &&
         s_last_shift == s_vertical_shift &&
+        s_last_bias_x == s_gaze_bias_x &&
+        s_last_bias_y == s_gaze_bias_y &&
         memcmp(&s_last_applied, pose, sizeof(*pose)) == 0) {
         return;
     }
 
     s_last_applied = *pose;
     s_last_shift   = s_vertical_shift;
+    s_last_bias_x  = s_gaze_bias_x;
+    s_last_bias_y  = s_gaze_bias_y;
     s_have_applied = true;
 
     s_pose_current = *pose;
@@ -499,9 +509,9 @@ void face_view_apply_pose(const face_pose_t *pose)
 
     /* Gaze direction, converted from -100..100 into pixels. */
     const int16_t look_dx =
-        (clamp_i16(pose->look_x, -100, 100) * FACE_EYE_LOOK_RANGE_X) / 100;
+        (clamp_i16(pose->look_x + s_gaze_bias_x, -100, 100) * FACE_EYE_LOOK_RANGE_X) / 100;
     const int16_t look_dy =
-        (clamp_i16(pose->look_y, -100, 100) * FACE_EYE_LOOK_RANGE_Y) / 100;
+        (clamp_i16(pose->look_y + s_gaze_bias_y, -100, 100) * FACE_EYE_LOOK_RANGE_Y) / 100;
 
     layout_eyes(pose, face_dx, face_dy, look_dx, look_dy);
     layout_brows(pose, face_dx, face_dy, look_dx, look_dy);
@@ -612,6 +622,16 @@ void face_view_set_vertical_shift(int16_t pixels, uint16_t duration_ms)
     lv_anim_set_time(&anim, duration_ms);
     lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
     lv_anim_start(&anim);
+}
+
+void face_view_set_gaze_bias(int16_t look_x, int16_t look_y)
+{
+    if (!s_created) {
+        return;
+    }
+    s_gaze_bias_x = clamp_i16(look_x, -100, 100);
+    s_gaze_bias_y = clamp_i16(look_y, -100, 100);
+    face_view_apply_pose(&s_pose_current);
 }
 
 void face_view_set_hidden(bool hidden)

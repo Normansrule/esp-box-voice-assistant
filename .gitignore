@@ -31,3 +31,6 @@ Thumbs.db
 __pycache__/
 *.pyc
 tests/build/
+
+# Hardware test captures (tools/collect_hw_log.py); commit reviewed ones to docs/test-logs/
+logs/

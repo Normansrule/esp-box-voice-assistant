@@ -36,11 +36,14 @@
 #include "audio_voice.h"
 #include "buddy_config.h"
 #include "buddy_console.h"
+#include "buddy_motion.h"
 #include "buddy_selftest.h"
 #include "buddy_settings.h"
 #include "buddy_timer.h"
+#include "hw_battery.h"
 #include "hw_buttons.h"
 #include "hw_display.h"
+#include "hw_imu.h"
 #include "hw_microphone.h"
 #include "hw_sensors.h"
 #include "hw_speaker.h"
@@ -147,11 +150,14 @@ void app_main(void)
     ESP_ERROR_CHECK(bsp_board_init());
 
     hw_sensors_init();          /* Not fatal: a bare box simply has no readout. */
+    hw_battery_init();          /* Not fatal: needs the SENSOR dock to mean anything. */
+    hw_imu_init();              /* Not fatal: the face just will not follow a lean. */
     hw_microphone_init();
     hw_buttons_init();
 
     /* --- 4. Face, then light --------------------------------------------- */
     ESP_ERROR_CHECK(ui_screen_face_create());
+    buddy_motion_start();       /* Tilt, shake and battery, now there is a face. */
 
     /* A beat so the first frame is fully drawn before anyone sees it. */
     vTaskDelay(pdMS_TO_TICKS(120));

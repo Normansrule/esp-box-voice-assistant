@@ -167,8 +167,8 @@ It ships **off**. To use it, put a project-scoped key with a low monthly limit i
 | Online brain (OpenAI), off by default | In firmware | `voice_cloud_brain.c`, `voice_router.c` |
 | Temperature, humidity, presence (sensor dock) | In firmware | `hw_sensors.c` |
 | Host unit tests | Runs in CI | `.github/workflows/ci.yml` |
-| Battery monitoring | **Planned** | needs a verified battery accessory and voltage sense first |
-| IMU gestures (onboard ICM42670 per the BSP) | **Planned** | not read by this firmware yet |
+| Battery voltage on BOX-3-SENSOR (GPIO10, ÷4.01), ~percent estimate, low warning | In firmware, **untested on device** | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
+| Motion: eyes follow tilt, shake → dizzy, pick up → surprised (ICM-42607-P) | In firmware, **untested on device** | `hw_imu.c`, `buddy_motion.c`. [Test it](docs/HARDWARE_TESTS.md) |
 | Web simulator | **Simulation** | browser only, never device data |
 
 Roadmap and hardware rules: [docs/ROADMAP.md](docs/ROADMAP.md).

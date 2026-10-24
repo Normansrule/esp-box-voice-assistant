@@ -71,6 +71,12 @@ void ui_screen_face_open_settings(void);
  */
 void ui_screen_face_open_examples(void);
 
+/** Lock-taking wrapper for face_view_set_gaze_bias() (motion sensor). */
+void ui_screen_face_set_gaze_bias(int16_t look_x, int16_t look_y);
+
+/** Lock-taking wrapper for face_animator_flash_emotion(). */
+void ui_screen_face_flash_emotion(face_emotion_t emotion, uint16_t hold_ms);
+
 #ifdef __cplusplus
 }
 #endif

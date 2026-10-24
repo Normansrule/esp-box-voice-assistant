@@ -151,6 +151,24 @@ void ui_screen_face_play_antic(void)
     }
 }
 
+void ui_screen_face_set_gaze_bias(int16_t look_x, int16_t look_y)
+{
+    /* Short timeout: a skipped frame of gaze is invisible, a stall is not. */
+    if (hw_display_lock(20)) {
+        face_view_set_gaze_bias(look_x, look_y);
+        hw_display_unlock();
+    }
+}
+
+void ui_screen_face_flash_emotion(face_emotion_t emotion, uint16_t hold_ms)
+{
+    if (hw_display_lock(500)) {
+        face_animator_notice_activity();
+        face_animator_flash_emotion(emotion, hold_ms);
+        hw_display_unlock();
+    }
+}
+
 void ui_screen_face_open_settings(void)
 {
     if (hw_display_lock(500)) {

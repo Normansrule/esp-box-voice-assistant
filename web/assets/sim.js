@@ -41,7 +41,8 @@
       this.anim = new F.Animator();
       this.opts = Object.assign({ chrome: true }, opts);
       this.bubble = null;              /* {text, source, until, w, h, lines, font} */
-      this.chip = null;                /* {temp, hum} strings or null */
+      this.chip = null;                /* {temp, hum, batt?} strings or null */
+      this.gaze = { x: 0, y: 0 };      /* motion-sensor gaze bias, look units */
       this.brightness = 1;
     }
 
@@ -93,7 +94,12 @@
       ctx.fillRect(0, 0, G.BUDDY_SCREEN_WIDTH, G.BUDDY_SCREEN_HEIGHT);
 
       if (this.bubble && now > this.bubble.until) this.hideCaption();
-      const pose = this.anim.tick(now);
+      let pose = this.anim.tick(now);
+      if (this.gaze.x || this.gaze.y) {
+        /* face_view_set_gaze_bias(): added to the pose's look, then clamped. */
+        const c = (v) => Math.max(-100, Math.min(100, v));
+        pose = Object.assign({}, pose, { look_x: c(pose.look_x + this.gaze.x), look_y: c(pose.look_y + this.gaze.y) });
+      }
       F.drawFace(ctx, pose, this.anim.shift);
       if (this.opts.chrome) {
         this.drawGear(ctx);
@@ -133,9 +139,10 @@
 
     drawChip(ctx) {
       ctx.font = "600 14px Montserrat, Inter, sans-serif";
-      const a = this.chip.temp, b = this.chip.hum;
+      const a = this.chip.temp, b = this.chip.hum, bt = this.chip.batt;
       const wa = ctx.measureText(a).width, wb = ctx.measureText(b).width;
-      const w = Math.ceil(wa + 8 + wb + 18), h = 25;
+      const wbt = bt ? ctx.measureText(bt.text).width + 22 : 0;   /* 22 = glyph + gap */
+      const w = Math.ceil(wa + 8 + wb + 18 + (bt ? 8 + wbt : 0)), h = 25;
       const x = G.BUDDY_SCREEN_WIDTH - EDGE - w, y = EDGE;
       this.pill(ctx, x, y, w, h, 12, T.surface);
       ctx.textBaseline = "middle";
@@ -143,6 +150,16 @@
       ctx.fillText(a, x + 9, y + h / 2 + 1);
       ctx.fillStyle = T.text_muted;
       ctx.fillText(b, x + 9 + wa + 8, y + h / 2 + 1);
+      if (bt) {
+        /* Battery glyph (LV_SYMBOL_BATTERY_*) and the "~NN%" estimate. */
+        const bx = x + 9 + wa + 8 + wb + 8, by = y + 8;
+        const col = bt.low ? T.espressif_red : T.text_muted;
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
+        ctx.strokeRect(bx + 0.5, by + 0.5, 15, 9);
+        ctx.fillRect(bx + 16, by + 3, 2, 4);
+        ctx.fillRect(bx + 2, by + 2, Math.round(12 * bt.level), 6);
+        ctx.fillText(bt.text, bx + 22, y + h / 2 + 1);
+      }
     }
 
     drawBubble(ctx) {
@@ -233,7 +250,7 @@
     volume: 70, chimes: true, brightness: 90, idleAntics: true, touchAntics: true,
     showReadout: true, fahrenheit: true, cloud: false, mode: 1, limit: G.BUDDY_DEFAULT_REQUESTS_PER_HOUR,
   };
-  const sensors = { temp: 22.5, hum: 44, dock: true };
+  const sensors = { temp: 22.5, hum: 44, dock: true, battMv: 3980 };
 
   /* ---------------------------------------------------------------------- */
   /* The main simulated device                                               */
@@ -266,7 +283,167 @@
     if (!sensors.dock || !settings.showReadout) { device.chip = null; return; }
     const t = settings.fahrenheit ? Math.trunc(sensors.temp * 9 / 5 + 32 + 0.5) + "°F"
       : Math.trunc(sensors.temp + 0.5) + "°C";
-    device.chip = { temp: t, hum: Math.trunc(sensors.hum + 0.5) + "%" };
+    const pct = batteryPercent(sensors.battMv);
+    device.chip = { temp: t, hum: Math.trunc(sensors.hum + 0.5) + "%",
+      batt: { text: "~" + pct + "%", level: pct / 100, low: sensors.battMv < G.BUDDY_BATTERY_LOW_MV } };
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Battery and motion: ports of hw_battery.c and buddy_motion.c           */
+  /* ---------------------------------------------------------------------- */
+
+  /* hw_battery_estimate_percent(): linear between rows of the same curve. */
+  function batteryPercent(mv) {
+    const c = FW.battery_curve;
+    if (mv >= c[0][0]) return 100;
+    if (mv <= c[c.length - 1][0]) return 0;
+    for (let i = 1; i < c.length; i++) {
+      if (mv >= c[i][0]) {
+        return c[i][1] + Math.trunc(((mv - c[i][0]) * (c[i - 1][1] - c[i][1])) / (c[i - 1][0] - c[i][0]));
+      }
+    }
+    return 0;
+  }
+
+  let batteryWarned = false;
+  function batteryChanged() {
+    updateChip();
+    const mv = sensors.battMv;
+    if (mv < G.BUDDY_BATTERY_LOW_MV && !batteryWarned && sensors.dock) {
+      batteryWarned = true;
+      const v = (mv / 1000).toFixed(2);
+      device.anim.flashEmotion("exhausted", 2500);
+      device.caption("status", `My battery is low: ${v} V.`, 5000);
+      log(`motion: battery low ${mv} mV (simulated input)`);
+    } else if (mv > G.BUDDY_BATTERY_LOW_MV + 150) {
+      batteryWarned = false;
+    }
+  }
+
+  /* buddy_motion.c: eyes slide towards the low side, clamped to -100..100. */
+  function setTilt(xDeg, yDeg, source) {
+    const c = (v) => Math.max(-100, Math.min(100, Math.trunc(v)));
+    device.gaze.x = c(xDeg * G.BUDDY_IMU_GAZE_PER_DEG);
+    device.gaze.y = c(yDeg * G.BUDDY_IMU_GAZE_PER_DEG);
+    const out = $("#tilt-out");
+    if (out) out.textContent = `${xDeg.toFixed(0)}°, ${yDeg.toFixed(0)}°` + (source ? ` (${source})` : "");
+    /* Picked up / set down, with the same hysteresis as hw_imu.c. */
+    const lean = Math.hypot(xDeg, yDeg);
+    if (!motion.lifted && lean > G.BUDDY_IMU_PICKUP_DEG) { motion.lifted = true; gesture("picked_up"); }
+    else if (motion.lifted && lean < G.BUDDY_IMU_PICKUP_DEG / 2) { motion.lifted = false; gesture("set_down"); }
+  }
+  const motion = { lifted: false, phone: false };
+
+  function gesture(name) {
+    log(`hw_imu: Gesture: ${name} (simulated input)`);
+    if (name === "shake") {
+      device.anim.flashEmotion("dizzy", 1800);
+      device.caption("buddy", "Whoa! Everything is spinning.", 2200);
+      const el = $("#device");
+      if (el && !reduceMotion) {
+        el.animate([{ transform: "rotate(0)" }, { transform: "rotate(-3deg)" }, { transform: "rotate(3deg)" },
+          { transform: "rotate(-2deg)" }, { transform: "rotate(0)" }], { duration: 500 });
+      }
+    } else if (name === "picked_up") {
+      device.anim.flashEmotion("surprised", 1200);
+    } else if (name === "set_down") {
+      device.anim.flashEmotion("relieved", 1400);
+    }
+  }
+
+  function setupMotionPanel() {
+    const pad = $("#tilt-pad");
+    if (!pad) return;
+    const knob = $("#tilt-knob");
+    const MAX = 40;   /* degrees at the edge of the pad */
+    const place = (xDeg, yDeg) => {
+      knob.style.left = 50 + (xDeg / MAX) * 50 + "%";
+      knob.style.top = 50 + (yDeg / MAX) * 50 + "%";
+    };
+    const fromEvent = (e) => {
+      const r = pad.getBoundingClientRect();
+      const nx = Math.max(-1, Math.min(1, ((e.clientX - r.left) / r.width) * 2 - 1));
+      const ny = Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1));
+      place(nx * MAX, ny * MAX);
+      setTilt(nx * MAX, ny * MAX, "pad");
+    };
+    let dragging = false;
+    pad.addEventListener("pointerdown", (e) => { dragging = true; pad.setPointerCapture(e.pointerId); fromEvent(e); });
+    pad.addEventListener("pointermove", (e) => { if (dragging) fromEvent(e); });
+    const release = () => {
+      if (!dragging) return;
+      dragging = false;
+      /* Let go: it settles back into the dock, like the real thing. */
+      const k = { x: parseFloat(knob.style.left) - 50, y: parseFloat(knob.style.top) - 50 };
+      const t0 = performance.now();
+      const step = (now) => {
+        const f = Math.max(0, 1 - (now - t0) / 350);
+        place((k.x / 50) * MAX * f, (k.y / 50) * MAX * f);
+        setTilt((k.x / 50) * MAX * f, (k.y / 50) * MAX * f, "pad");
+        if (f > 0) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    };
+    pad.addEventListener("pointerup", release);
+    pad.addEventListener("pointercancel", release);
+    pad.addEventListener("keydown", (e) => {
+      const k = { ArrowLeft: [-8, 0], ArrowRight: [8, 0], ArrowUp: [0, -8], ArrowDown: [0, 8] }[e.key];
+      if (!k) return;
+      e.preventDefault();
+      const cur = { x: device.gaze.x / G.BUDDY_IMU_GAZE_PER_DEG + k[0], y: device.gaze.y / G.BUDDY_IMU_GAZE_PER_DEG + k[1] };
+      place(cur.x, cur.y);
+      setTilt(cur.x, cur.y, "keys");
+    });
+
+    $("#shake").addEventListener("click", () => gesture("shake"));
+    $("#pickup").addEventListener("click", () => { place(0, -32); setTilt(0, -32, "button"); });
+    $("#setdown").addEventListener("click", () => { place(0, 0); setTilt(0, 0, "button"); });
+
+    /* A phone has an accelerometer too: let it stand in for the box's IMU. */
+    const phoneBtn = $("#phone-tilt");
+    if (!("DeviceOrientationEvent" in window)) { phoneBtn.hidden = true; }
+    let base = null;
+    let shakePeaks = [];
+    phoneBtn.addEventListener("click", async () => {
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === "function") {
+          if (await DeviceOrientationEvent.requestPermission() !== "granted") return;
+        }
+      } catch (err) { log("motion: phone sensor permission refused"); return; }
+      motion.phone = true;
+      phoneBtn.textContent = "Using your phone's tilt";
+      phoneBtn.disabled = true;
+      window.addEventListener("deviceorientation", (e) => {
+        if (e.gamma == null) return;
+        if (!base) base = { g: e.gamma, b: e.beta };   /* like hw_imu_zero() */
+        const x = Math.max(-MAX, Math.min(MAX, e.gamma - base.g));
+        const y = Math.max(-MAX, Math.min(MAX, e.beta - base.b));
+        place(x, y);
+        setTilt(x, y, "phone");
+      });
+      window.addEventListener("devicemotion", (e) => {
+        const a = e.accelerationIncludingGravity;
+        if (!a || a.x == null) return;
+        /* Same rule as hw_imu.c: |a| - 1 g above the threshold, N times in the window. */
+        const jolt = Math.abs(Math.hypot(a.x, a.y, a.z) / 9.81 - 1);
+        const now = performance.now();
+        if (jolt > G.BUDDY_IMU_SHAKE_G) {
+          shakePeaks = shakePeaks.filter((t) => now - t < G.BUDDY_IMU_SHAKE_WINDOW_MS);
+          if (!shakePeaks.length || now - shakePeaks[shakePeaks.length - 1] > 120) shakePeaks.push(now);
+          if (shakePeaks.length >= G.BUDDY_IMU_SHAKE_PEAKS) { shakePeaks = []; gesture("shake"); }
+        }
+      });
+      log("motion: following your phone's motion sensor (simulated IMU)");
+    });
+
+    const batt = $("#batt");
+    const sync = () => {
+      sensors.battMv = +batt.value;
+      $("#batt-out").textContent = `${(sensors.battMv / 1000).toFixed(2)} V  ~${batteryPercent(sensors.battMv)}%`;
+      batteryChanged();
+    };
+    batt.addEventListener("input", sync);
+    sync();
   }
 
   function chime(name) {
@@ -743,6 +920,7 @@
     });
     $$("[data-fw=version]").forEach((el) => { el.textContent = "v" + FW.firmware.version; });
     $$("[data-fw=sensor-refresh]").forEach((el) => { el.textContent = G.BUDDY_SENSOR_REFRESH_MS / 1000 + " s"; });
+    $$("[data-fw=batt-low]").forEach((el) => { el.textContent = (G.BUDDY_BATTERY_LOW_MV / 1000).toFixed(2) + " V"; });
   }
 
   function countUp(el) {
@@ -817,6 +995,7 @@
   function boot() {
     setupStats();
     buildPanels();
+    setupMotionPanel();
     setupPipeline();
     const morphFrame = setupMorph();
     setupReveal();

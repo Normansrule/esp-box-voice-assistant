@@ -21,6 +21,10 @@
  *     volume <0-100>          speaker volume, saved
  *     brightness <10-100>     backlight, saved
  *     timer <minutes>         start the kitchen timer; "timer cancel" stops it
+ *     motion                  one IMU reading (chip, accel, gyro, tilt)
+ *     motion stream [n]       print "IMU,..." CSV lines; "motion stop" ends it
+ *     motion zero             treat the current pose as level
+ *     battery                 dock battery voltage and ESTIMATED charge
  *     reboot                  restart the chip
  *     help                    this list
  *

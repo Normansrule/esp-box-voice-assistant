@@ -54,11 +54,12 @@ def parse_defines(text):
 def evaluate(expr, scale, symbols):
     """Evaluate a small C integer expression using C truncating division."""
     expr = expr.strip()
+    expr = re.sub(r"(\d+\.\d+)f\b", r"\1", expr)   # C float literals: 0.9f -> 0.9
     expr = expr.replace("true", "True").replace("false", "False")
     for name, value in symbols.items():
         expr = re.sub(r"\b%s\b" % name, str(value), expr)
     expr = re.sub(r"\b(?:S|FACE_SCALED)\(", "_scaled(", expr)
-    if re.search(r"[^\w\s()+\-*/,]", expr):
+    if re.search(r"[^\w\s()+\-*/,.]", expr):
         raise ValueError("unexpected expression: " + expr)
     return eval(expr, {"__builtins__": {}},
                 {"_scaled": lambda px: c_div(px * scale, 100),
@@ -81,6 +82,8 @@ def config_and_geometry():
         "FACE_IDLE_ANTIC_INTERVAL_MIN_MS", "FACE_IDLE_ANTIC_INTERVAL_MAX_MS",
         "FACE_LIP_SYNC_REFRESH_MS", "BUDDY_LISTEN_WINDOW_MS",
         "BUDDY_DEFAULT_REQUESTS_PER_HOUR", "BUDDY_SENSOR_REFRESH_MS",
+        "BUDDY_IMU_RATE_HZ", "BUDDY_IMU_SHAKE_G", "BUDDY_IMU_SHAKE_PEAKS", "BUDDY_IMU_SHAKE_WINDOW_MS",
+        "BUDDY_IMU_PICKUP_DEG", "BUDDY_IMU_GAZE_PER_DEG", "BUDDY_BATTERY_LOW_MV",
     ]
     geometry = {}
     for name in wanted:
@@ -202,6 +205,13 @@ def replies():
     return out
 
 
+def battery_curve():
+    """The voltage-to-percent table in main/hardware/hw_battery.c."""
+    src = read(MAIN / "hardware" / "hw_battery.c")
+    table = src.split("s_curve[] = {", 1)[1].split("};", 1)[0]
+    return [[int(mv), int(pc)] for mv, pc in re.findall(r"\{\s*(\d+),\s*(\d+)\s*\}", table)]
+
+
 def build():
     firmware, geometry, scale = config_and_geometry()
     geometry.update(view_constants())
@@ -215,6 +225,7 @@ def build():
         "antics": antics,
         "commands": commands(),
         "replies": replies(),
+        "battery_curve": battery_curve(),
         "voice_clip_count": len(list((ROOT / "spiffs" / "voice").glob("*.mp3"))),
     }
     as_json = json.dumps(data, indent=1, sort_keys=False) + "\n"
