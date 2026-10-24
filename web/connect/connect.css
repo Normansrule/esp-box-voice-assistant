@@ -173,3 +173,19 @@ dialog h2 { margin: 0 0 12px; font-size: 18px; }
   .brand span { white-space: nowrap; }
   .bar .btn { padding: 10px 14px; }
 }
+
+/* Live motion and battery card */
+.live-card { margin-top: 18px; }
+.live-tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--red);
+  background: rgba(232, 54, 45, .08); padding: 3px 7px; border-radius: 99px; vertical-align: 3px; margin-left: 6px; }
+.live-grid { display: grid; grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 820px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
+.level svg { width: 100%; max-width: 180px; display: block; margin: 0 auto; }
+.lv-ring { fill: none; stroke: var(--border); stroke-width: 1; }
+.lv-dot { fill: var(--red); transition: cx .1s linear, cy .1s linear; }
+.level p { text-align: center; margin: 6px 0 0; }
+.spark { width: 100%; height: 36px; display: block; margin: 4px 0 8px; }
+.spark polyline { fill: none; stroke: var(--red); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.row.wrap { flex-wrap: wrap; }
+.small { font-size: 12.5px; }
+

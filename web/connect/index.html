@@ -143,6 +143,46 @@
         <div class="pills" id="faces"><span class="muted">Waiting for the box.</span></div>
       </div>
     </div>
+
+    <div class="card live-card">
+      <div class="card-head"><h2>Motion and battery <span class="live-tag">live from the box</span></h2>
+        <span class="muted small" id="imu-chip">IMU: UNKNOWN</span></div>
+      <div class="live-grid">
+        <div class="level" aria-label="Bubble level showing the box's lean">
+          <svg viewBox="-50 -50 100 100" aria-hidden="true">
+            <circle r="46" class="lv-ring"/><circle r="23" class="lv-ring"/>
+            <line x1="-46" y1="0" x2="46" y2="0" class="lv-ring"/><line x1="0" y1="-46" x2="0" y2="46" class="lv-ring"/>
+            <circle r="7" id="level-dot" class="lv-dot"/>
+          </svg>
+          <p class="muted small" id="tilt-text">tilt UNKNOWN</p>
+        </div>
+        <div>
+          <dl class="stats" id="imu-stats">
+            <dt>Accel (g)</dt><dd id="imu-acc">UNKNOWN</dd>
+            <dt>Gyro (°/s)</dt><dd id="imu-gyro">UNKNOWN</dd>
+            <dt>IMU temp</dt><dd id="imu-temp">UNKNOWN</dd>
+            <dt>Last gesture</dt><dd id="imu-gesture">none yet</dd>
+          </dl>
+          <div class="row wrap">
+            <button class="btn btn-red btn-sm" id="btn-motion" type="button" disabled>Start live motion</button>
+            <button class="btn btn-ghost btn-sm" id="btn-zero" type="button" disabled>Set level</button>
+          </div>
+        </div>
+        <div>
+          <dl class="stats">
+            <dt>Battery</dt><dd id="bat-v">UNKNOWN</dd>
+            <dt>Charge</dt><dd id="bat-pct">UNKNOWN</dd>
+          </dl>
+          <svg class="spark" viewBox="0 0 120 32" preserveAspectRatio="none" aria-label="Battery voltage history"><polyline id="bat-spark" points=""/></svg>
+          <div class="row wrap">
+            <button class="btn btn-ghost btn-sm" id="btn-battery" type="button" disabled>Read battery</button>
+            <button class="btn btn-ghost btn-sm" id="btn-record" type="button" disabled>Record CSV</button>
+          </div>
+          <p class="muted small">Charge is an <b>estimate</b> from voltage. The dock's charger only lights LEDs, so charging can't be seen. Needs the BOX-3-SENSOR dock.</p>
+        </div>
+      </div>
+      <p class="muted small">Motion and battery support is new and <b>untested on a real box</b>. If the dot moves the wrong way, that is exactly what we need to know: press <b>Record CSV</b>, tilt and shake for a minute, then send the file.</p>
+    </div>
   </section>
 
   <footer class="foot">

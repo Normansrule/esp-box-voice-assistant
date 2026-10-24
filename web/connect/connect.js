@@ -155,6 +155,12 @@ function receiveLine(raw) {
     handleReply(text.slice(REPLY_PREFIX.length));
     return;
   }
+  if (text.startsWith("IMU,") || text.startsWith("BATT,")) {
+    liveSample(text);   /* 10 lines a second: kept out of the terminal */
+    return;
+  }
+  const gesture = /Gesture: (\w+)/.exec(text);
+  if (gesture) liveGesture(gesture[1]);
   const level = /^([EWI]) \(\d+\)/.exec(text);
   termLine(text, cls || (level ? "lv-" + level[1].toLowerCase() : ""));
   if (/Serial console ready/.test(text)) send("status");
@@ -459,7 +465,11 @@ function handleReply(json) {
       stat("Cloud left", r.cloud_requests_left) +
       stat("Timer", r.timer_s ? `${Math.floor(r.timer_s / 60)}:${String(r.timer_s % 60).padStart(2, "0")}` : "off") +
       stat("Sensor dock", r.dock === undefined ? undefined : r.dock ? "attached" : "not attached") +
-      (r.temperature_c !== undefined ? stat("Room", `${r.temperature_c} °C, ${r.humidity}% RH`) : "");
+      (r.temperature_c !== undefined ? stat("Room", `${r.temperature_c} °C, ${r.humidity}% RH`) : "") +
+      (r.imu !== undefined ? stat("Motion sensor", r.imu) : "") +
+      (r.battery_mv !== undefined ? stat("Battery", `${(r.battery_mv / 1000).toFixed(2)} V, ~${r.battery_pct_est}% (est.)`) : "");
+    if (r.imu !== undefined) $("imu-chip").textContent = "IMU: " + r.imu;
+    if (r.battery_mv !== undefined) showBattery(r.battery_mv, r.battery_pct_est);
     if (r.volume !== undefined) { $("vol").value = r.volume; $("vol-out").textContent = r.volume + "%"; }
     if (r.brightness !== undefined) { $("bri").value = r.brightness; $("bri-out").textContent = r.brightness + "%"; }
     break;
@@ -474,9 +484,85 @@ function handleReply(json) {
   case "faces":
     renderPills("faces", r.faces || [], (f) => send("face " + f));
     break;
+  case "battery": if (r.ok) showBattery(r.battery_mv, r.percent_est); break;
+  case "motion":
+    if (r.chip) $("imu-chip").textContent = `IMU: ${r.chip} (WHO_AM_I 0x${(r.who_am_i || 0).toString(16)})`;
+    if (r.tilt_deg) showTilt(r.tilt_deg[0], r.tilt_deg[1]);
+    break;
   case "volume": $("vol-out").textContent = r.volume + "%"; break;
   case "brightness": $("bri-out").textContent = r.brightness + "%"; break;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Live motion and battery (firmware: hw_imu.c, hw_battery.c)          */
+/* ------------------------------------------------------------------ */
+const live = { streaming: false, recording: null, batt: [] };
+
+function liveSample(line) {
+  if (live.recording) live.recording.push(line);
+  const f = line.split(",");
+  if (f[0] === "IMU" && f.length >= 11) {
+    const [ax, ay, az, gx, gy, gz, tx, ty, tc] = f.slice(2).map(Number);
+    showTilt(tx, ty);
+    $("imu-acc").textContent = `${ax.toFixed(2)}, ${ay.toFixed(2)}, ${az.toFixed(2)}  (|a| ${Math.hypot(ax, ay, az).toFixed(2)})`;
+    $("imu-gyro").textContent = `${gx.toFixed(0)}, ${gy.toFixed(0)}, ${gz.toFixed(0)}`;
+    $("imu-temp").textContent = `${tc.toFixed(1)} °C`;
+  } else if (f[0] === "BATT" && f.length >= 5) {
+    showBattery(Number(f[3]), Number(f[4]));
+  }
+}
+
+function showTilt(tx, ty) {
+  const k = 46 / 40;   /* 40 degrees reaches the outer ring */
+  const clamp = (v) => Math.max(-46, Math.min(46, v));
+  $("level-dot").setAttribute("cx", clamp(tx * k).toFixed(1));
+  $("level-dot").setAttribute("cy", clamp(ty * k).toFixed(1));
+  $("tilt-text").textContent = `tilt x ${tx.toFixed(0)}°, y ${ty.toFixed(0)}°`;
+}
+
+function showBattery(mv, pct) {
+  if (!mv) return;
+  $("bat-v").textContent = `${(mv / 1000).toFixed(2)} V (measured)`;
+  $("bat-pct").textContent = `~${pct}% (estimated)`;
+  live.batt.push(mv);
+  if (live.batt.length > 60) live.batt.shift();
+  const lo = Math.min(...live.batt) - 20, hi = Math.max(...live.batt) + 20;
+  $("bat-spark").setAttribute("points", live.batt.map((v, i) =>
+    `${(i / Math.max(1, live.batt.length - 1)) * 120},${32 - ((v - lo) / (hi - lo)) * 32}`).join(" "));
+}
+
+function liveGesture(name) {
+  $("imu-gesture").textContent = `${name.replace("_", " ")} at ${new Date().toLocaleTimeString()}`;
+  if (live.recording) live.recording.push(`GESTURE,${Date.now()},${name}`);
+}
+
+function toggleStream() {
+  live.streaming = !live.streaming;
+  send(live.streaming ? "motion stream 5" : "motion stop");
+  $("btn-motion").textContent = live.streaming ? "Stop live motion" : "Start live motion";
+}
+
+function toggleRecord() {
+  if (!live.recording) {
+    live.recording = [];
+    if (!live.streaming) toggleStream();
+    send("battery");
+    $("btn-record").textContent = "Stop and save";
+    return;
+  }
+  const rows = live.recording;
+  live.recording = null;
+  $("btn-record").textContent = "Record CSV";
+  const header = "# IMU,ms,ax_g,ay_g,az_g,gx_dps,gy_dps,gz_dps,tilt_x_deg,tilt_y_deg,temp_c\n" +
+                 "# BATT,ms,pin_mv,battery_mv,percent_est\n# GESTURE,unix_ms,name\n";
+  const blob = new Blob([header + rows.join("\n") + "\n"], { type: "text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `box3-motion-battery-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  sys(`Saved ${rows.length} lines.`);
 }
 
 function renderPills(id, items, onPick) {
@@ -508,7 +594,8 @@ function refreshButtons() {
   $("btn-flash").disabled = !state.port || state.busy || !selectedParts().length;
   $("btn-reset").disabled = !live;
   $("term-input").disabled = $("term-send").disabled = !live;
-  for (const id of ["btn-status", "vol", "bri", "btn-timer", "btn-timer-cancel", "btn-selftest", "btn-reboot"]) $(id).disabled = !ctl;
+  for (const id of ["btn-status", "vol", "bri", "btn-timer", "btn-timer-cancel", "btn-selftest", "btn-reboot",
+                    "btn-motion", "btn-zero", "btn-battery", "btn-record"]) $(id).disabled = !ctl;
   if (!state.busy) setLink(state.port ? (state.monitoring ? "Connected" : "Port chosen") : "Not connected", state.port ? "on" : "off");
 }
 
@@ -593,6 +680,10 @@ function start() {
   });
 
   $("btn-status").addEventListener("click", () => send("status"));
+  $("btn-motion").addEventListener("click", toggleStream);
+  $("btn-zero").addEventListener("click", () => send("motion zero"));
+  $("btn-battery").addEventListener("click", () => send("battery"));
+  $("btn-record").addEventListener("click", toggleRecord);
   $("btn-selftest").addEventListener("click", () => send("selftest"));
   $("btn-reboot").addEventListener("click", () => send("reboot"));
   $("btn-timer").addEventListener("click", () => send("timer " + $("timer-min").value));
