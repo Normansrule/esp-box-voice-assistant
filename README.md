@@ -165,6 +165,7 @@ It ships **off**. To use it, put a project-scoped key with a low monthly limit i
 | Wake word and offline phrases (ESP-SR) | In firmware | `main/voice/` |
 | Offline voice clips | In firmware | `spiffs/voice/` |
 | Online brain (OpenAI), off by default | In firmware | `voice_cloud_brain.c`, `voice_router.c` |
+| Home AI (small AI on your own PC, free, no account) | In firmware; PC side **verified in test**, **untested on device** | `tools/home_brain/`: sums, percentages, word problems, dates, clock maths and unit conversions are computed exactly by tools (15 unit tests pass); other questions go to llama3.2. The `--think` mode is untested live. |
 | Temperature, humidity, presence (sensor dock) | In firmware | `hw_sensors.c` |
 | Host unit tests | Runs in CI | `.github/workflows/ci.yml` |
 | Battery voltage on BOX-3-SENSOR (GPIO10, ÷4.01), ~percent estimate, low warning | In firmware, **untested on device** | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
