@@ -43,6 +43,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/run_tests.py
+      # The home brain server: wire format and tools, with stand-in models.
+      - run: python tools/home_brain/test_home_brain.py
+      - run: python tools/home_brain/test_brain_tools.py
 
   generated:
     name: Simulator data and README art are fresh

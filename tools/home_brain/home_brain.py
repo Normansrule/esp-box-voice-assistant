@@ -58,6 +58,9 @@ import urllib.request
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import brain_tools  # noqa: E402
+
 DEFAULT_PORT = 8765
 DEFAULT_OLLAMA = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "llama3.2"
@@ -103,13 +106,38 @@ class WhisperEars:
 # --------------------------------------------------------------------------- #
 
 class OllamaMind:
-    """A model served by Ollama, asked through its /api/chat endpoint."""
+    """
+    A model served by Ollama, asked through its /api/chat endpoint.
 
-    def __init__(self, base_url, model, max_tokens):
+    Two things on top of a plain chat:
+
+      TOOLS   The model may call a calculator, a date tool and a unit converter
+              (brain_tools.py) instead of guessing numbers, which small models
+              get wrong. Up to MAX_TOOL_ROUNDS calls per question.
+      THINK   With --think and a reasoning model (qwen3, deepseek-r1), the model
+              reasons before answering. The reasoning stays on this computer;
+              only the final answer goes to the box.
+    """
+
+    MAX_TOOL_ROUNDS = 4
+    THINKING_TOKENS = 1024
+
+    def __init__(self, base_url, model, max_tokens, use_tools=True, think=False):
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.max_tokens = max_tokens
-        self.description = "%s via Ollama" % model
+        self.use_tools = use_tools
+        self.think = think
+        self.last_tool_calls = []
+        extras = [x for x, on in (("tools", use_tools), ("thinking", think)) if on]
+        self.description = "%s via Ollama%s" % (model, (" + " + ", ".join(extras)) if extras else "")
+
+    def _chat(self, body):
+        request = urllib.request.Request(self.base_url + "/api/chat",
+                                         data=json.dumps(body).encode("utf-8"),
+                                         headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=60) as reply:
+            return json.load(reply)
 
     def check(self):
         """Raise with a useful message when Ollama or the model is missing."""
@@ -124,25 +152,98 @@ class OllamaMind:
             raise RuntimeError("Ollama does not have %s yet. Run: ollama pull %s"
                                % (self.model, self.model))
 
-    def reply(self, messages, max_tokens, temperature):
+    def reply(self, messages, max_tokens, temperature, raw=False):
+        """
+        Answer the conversation. Returns (text, tokens used).
+
+        The text is tidied for the box (see brain_tools.tidy_for_speech) unless
+        raw is set, which the warm-up uses.
+        """
         limit = min(int(max_tokens or self.max_tokens), self.max_tokens)
-        body = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            # Keep the model loaded between questions, so the second one is fast.
-            "keep_alive": "30m",
-            "options": {"num_predict": limit,
-                        "temperature": 0.7 if temperature is None else float(temperature)},
-        }
-        request = urllib.request.Request(self.base_url + "/api/chat",
-                                         data=json.dumps(body).encode("utf-8"),
-                                         headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(request, timeout=60) as reply:
-            answer = json.load(reply)
-        text = answer.get("message", {}).get("content", "").strip()
-        used = int(answer.get("prompt_eval_count", 0)) + int(answer.get("eval_count", 0))
-        return text, used
+        conversation = list(messages)
+        if self.use_tools and not raw:
+            # After the box's personality prompt, so the box's voice still leads.
+            position = 1 if conversation and conversation[0].get("role") == "system" else 0
+            conversation.insert(position, {"role": "system",
+                                           "content": brain_tools.tools_instruction()})
+
+        self.last_tool_calls = []
+        self._last_good_tool = None
+        used = 0
+        for _ in range(self.MAX_TOOL_ROUNDS + 1):
+            body = {
+                "model": self.model,
+                "messages": conversation,
+                "stream": False,
+                # Keep the model loaded between questions, so the second one is fast.
+                "keep_alive": "30m",
+                "options": {"num_predict": limit + (self.THINKING_TOKENS if self.think else 0),
+                            "temperature": 0.7 if temperature is None else float(temperature)},
+            }
+            if self.use_tools and not raw:
+                body["tools"] = brain_tools.TOOL_SCHEMAS
+            if self.think:
+                body["think"] = True
+
+            try:
+                answer = self._chat(body)
+            except urllib.error.HTTPError as error:
+                detail = error.read().decode("utf-8", "replace")
+                # A model without tool or thinking support says so; drop the
+                # feature for good and ask again, rather than failing.
+                if "tools" in detail and self.use_tools:
+                    print("  (%s cannot use tools; answering without them)" % self.model)
+                    self.use_tools = False
+                    return self.reply(messages, max_tokens, temperature, raw)
+                if "think" in detail and self.think:
+                    print("  (%s cannot think; answering directly)" % self.model)
+                    self.think = False
+                    return self.reply(messages, max_tokens, temperature, raw)
+                raise RuntimeError("Ollama refused: %s" % detail[:200])
+
+            used += int(answer.get("prompt_eval_count", 0)) + int(answer.get("eval_count", 0))
+            message = answer.get("message", {})
+            calls = message.get("tool_calls") or []
+            if not calls:
+                text = message.get("content", "")
+                if raw:
+                    return text.strip(), used
+                return self._trust_the_tools(brain_tools.tidy_for_speech(text)), used
+
+            conversation.append({"role": "assistant", "content": message.get("content", ""),
+                                 "tool_calls": calls})
+            for call in calls:
+                function = call.get("function", {})
+                arguments = function.get("arguments") or {}
+                if isinstance(arguments, str):
+                    try:
+                        arguments = json.loads(arguments)
+                    except ValueError:
+                        arguments = {}
+                result = brain_tools.run_tool(function.get("name", ""), arguments)
+                self.last_tool_calls.append("%s(%s) = %s" % (function.get("name"),
+                                                             json.dumps(arguments), result))
+                if not result.startswith("error"):
+                    self._last_good_tool = (function.get("name", ""), result)
+                conversation.append({"role": "tool", "tool_name": function.get("name", ""),
+                                     "content": result})
+
+        return brain_tools.tidy_for_speech("I went round in circles on that one."), used
+
+    def _trust_the_tools(self, answer):
+        """
+        Small models call the calculator and then say a different number. The
+        tool is right by construction, so if the answer does not contain the
+        tool's result, the tool's result is said instead, keeping the mood.
+        """
+        if self._last_good_tool is None:
+            return answer
+        name, result = self._last_good_tool
+        if brain_tools.answer_agrees_with_tool(answer, result):
+            return answer
+        mood = answer.split("]", 1)[0] + "]" if answer.startswith("[") else "[neutral]"
+        self.last_tool_calls.append("answer disagreed with %s; using the tool's result" % name)
+        return "%s %s" % (mood, brain_tools.tool_answer_sentence(name, result))
 
 
 # --------------------------------------------------------------------------- #
@@ -379,6 +480,8 @@ def make_handler(brain):
             started = time.time()
             text, used = brain.mind.reply(messages, request.get("max_tokens"),
                                           request.get("temperature"))
+            for call in getattr(brain.mind, "last_tool_calls", []):
+                brain.say("  tool : %s" % call)
             brain.say("answer (%.1f s): %s" % (time.time() - started, text))
             self._send(200, chat_completion_body(text, brain.mind.model, used))
 
@@ -427,7 +530,8 @@ def build_brain(args):
         problems.append("hearing: %s" % error)
 
     try:
-        mind = OllamaMind(args.ollama, args.model, args.max_tokens)
+        mind = OllamaMind(args.ollama, args.model, args.max_tokens,
+                          use_tools=not args.no_tools, think=args.think)
         mind.check()
     except RuntimeError as error:
         problems.append("thinking: %s" % error)
@@ -441,6 +545,35 @@ def build_brain(args):
         problems.append("speaking: %s" % error)
 
     return HomeBrain(ears, mind, voice, quiet=args.quiet), problems
+
+
+# The box's default personality plus the mood instruction it adds, so a typed
+# test gets the answer the box would. Kept in step with buddy_settings.c and
+# voice_cloud_brain.c by hand; it only affects --ask.
+BOX_SYSTEM_PROMPT = (
+    "You are a small, cheerful robot buddy living on a desk. Answer in at most two "
+    "short sentences. Be warm and a little playful. Always begin your reply with a mood "
+    "in square brackets, chosen from: [happy] [excited] [curious] [surprised] [sad] "
+    "[annoyed] [sleepy] [love] [confused] [neutral]. Then answer in at most two sentences "
+    "and under 200 characters.")
+
+
+def ask_once(args):
+    """Answer one typed question, showing any tool calls, for testing at a desk."""
+    mind = OllamaMind(args.ollama, args.model, args.max_tokens,
+                      use_tools=not args.no_tools, think=args.think)
+    try:
+        mind.check()
+    except RuntimeError as error:
+        print(error)
+        return 1
+    started = time.time()
+    text, _ = mind.reply([{"role": "system", "content": BOX_SYSTEM_PROMPT},
+                          {"role": "user", "content": args.ask}], 160, 0.7)
+    for call in mind.last_tool_calls:
+        print("  tool : %s" % call)
+    print("answer (%.1f s): %s" % (time.time() - started, text))
+    return 0
 
 
 def main(argv=None):
@@ -458,8 +591,18 @@ def main(argv=None):
     parser.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"])
     parser.add_argument("--piper-voice", default=None,
                         help="a Piper .onnx voice; without it the computer's own voice is used")
+    parser.add_argument("--think", action="store_true",
+                        help="let a reasoning model (qwen3, deepseek-r1) think before answering")
+    parser.add_argument("--no-tools", action="store_true",
+                        help="do not give the model the calculator, date and unit tools")
     parser.add_argument("--quiet", action="store_true", help="do not print questions and answers")
+    parser.add_argument("--ask", metavar="QUESTION",
+                        help="answer one typed question the way the box would, then exit "
+                             "(needs only Ollama; no microphone, Whisper or box)")
     args = parser.parse_args(argv)
+
+    if args.ask:
+        return ask_once(args)
 
     brain, problems = build_brain(args)
 
@@ -477,7 +620,7 @@ def main(argv=None):
     # around ten seconds, which would eat most of the box's request deadline.
     print("\nWarming up %s..." % brain.mind.model, flush=True)
     try:
-        brain.mind.reply([{"role": "user", "content": "Say hi."}], 1, 0)
+        brain.mind.reply([{"role": "user", "content": "Say hi."}], 1, 0, raw=True)
     except Exception as error:
         print("  (warm-up failed, the first answer may be slow: %s)" % error)
 
