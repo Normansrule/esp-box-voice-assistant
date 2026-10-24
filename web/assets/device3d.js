@@ -48,68 +48,84 @@ async function start() {
   scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-  camera.position.set(0, 0.5, 7.3);
-  camera.lookAt(0, -0.3, 0);
+  camera.position.set(0, 2.1, 7.2);
+  camera.lookAt(0, -0.55, 0);
 
   const RED = new THREE.Color("#E8362D");
-  const shell = new THREE.MeshPhysicalMaterial({ color: "#f4f4f6", roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.25 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: "#0c0d0f", roughness: 0.08, metalness: 0.1, clearcoat: 1 });
-  const dockMat = new THREE.MeshPhysicalMaterial({ color: "#e6e7eb", roughness: 0.55, clearcoat: 0.2 });
+  const shell = new THREE.MeshPhysicalMaterial({ color: "#f5f5f7", roughness: 0.34, clearcoat: 0.7, clearcoatRoughness: 0.22 });
+  const glass = new THREE.MeshPhysicalMaterial({ color: "#0c0d0f", roughness: 0.06, metalness: 0.1, clearcoat: 1 });
+  /* BOX-3-DOCK: the light teal-blue wedge stand the BOX-3 kit ships with. */
+  const dockMat = new THREE.MeshPhysicalMaterial({ color: "#3f9fc2", roughness: 0.55, clearcoat: 0.2, clearcoatRoughness: 0.5, envMapIntensity: 0.35 });
   const grey = new THREE.MeshStandardMaterial({ color: "#a7aab1", roughness: 0.5 });
+  const portMat = new THREE.MeshStandardMaterial({ color: "#1e1f22", roughness: 0.35, metalness: 0.4 });
 
   const device = new THREE.Group();
+  device.position.y = -2.0;           /* dock sits on the floor plane */
   scene.add(device);
 
-  /* Main body: 2.4-inch 4:3 panel in a rounded shell. */
-  const body = new THREE.Mesh(new RoundedBoxGeometry(3.2, 2.7, 1.25, 8, 0.32), shell);
-  body.castShadow = true;
-  device.add(body);
+  /* The dock: a wedge, low at the front and high at the back, so the unit
+     plugged into its top leans back towards the desk. */
+  const DOCK_W = 3.4, FRONT_H = 0.34, BACK_H = 0.86, DEPTH = 1.3;
+  const profile = new THREE.Shape();
+  profile.moveTo(DEPTH / 2, 0);
+  profile.lineTo(-DEPTH / 2, 0);
+  profile.lineTo(-DEPTH / 2, BACK_H);
+  profile.lineTo(DEPTH / 2, FRONT_H);
+  profile.closePath();
+  const dockGeo = new THREE.ExtrudeGeometry(profile, {
+    depth: DOCK_W - 0.24, bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 6, curveSegments: 8 });
+  dockGeo.translate(0, 0, -(DOCK_W - 0.24) / 2);
+  const dock = new THREE.Mesh(dockGeo, dockMat);
+  dock.rotation.y = -Math.PI / 2;     /* profile u -> +z (front), extrusion -> x */
+  dock.castShadow = true;
+  dock.receiveShadow = true;
+  device.add(dock);
 
-  const bezel = new THREE.Mesh(new RoundedBoxGeometry(2.86, 2.2, 0.06, 6, 0.16), glass);
-  bezel.position.set(0, 0.08, 0.63);
-  device.add(bezel);
+  /* USB-C on the dock's right-hand side. */
+  const usb = new THREE.Mesh(new RoundedBoxGeometry(0.06, 0.12, 0.34, 3, 0.05), portMat);
+  usb.position.set(DOCK_W / 2 + 0.005, 0.24, 0.1);
+  device.add(usb);
+
+  /* The main unit, tilted back by the dock's slope. */
+  const tilt = Math.atan2(BACK_H - FRONT_H, DEPTH);
+  const unit = new THREE.Group();
+  unit.position.set(0, (FRONT_H + BACK_H) / 2 - 0.02, 0.02);
+  unit.rotation.x = -tilt;
+  device.add(unit);
+
+  const UNIT_H = 2.72, UNIT_D = 0.82;
+  const body = new THREE.Mesh(new RoundedBoxGeometry(3.24, UNIT_H, UNIT_D, 10, 0.34), shell);
+  body.position.y = UNIT_H / 2;
+  body.castShadow = true;
+  unit.add(body);
+
+  const bezel = new THREE.Mesh(new RoundedBoxGeometry(2.9, 2.26, 0.05, 6, 0.18), glass);
+  bezel.position.set(0, UNIT_H / 2 + 0.06, UNIT_D / 2 + 0.005);
+  unit.add(bezel);
 
   const texture = new THREE.CanvasTexture(sim.heroCanvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.56, 1.92),
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.95),
     new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }));
-  screen.position.set(0, 0.08, 0.665);
-  device.add(screen);
+  screen.position.set(0, UNIT_H / 2 + 0.06, UNIT_D / 2 + 0.034);
+  unit.add(screen);
 
   /* Two microphone holes above the screen and the mute switch on top. */
   [-0.32, 0.32].forEach((x) => {
     const mic = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 20), grey);
     mic.rotation.x = Math.PI / 2;
-    mic.position.set(x, 1.23, 0.626);
-    device.add(mic);
+    mic.position.set(x, UNIT_H - 0.12, UNIT_D / 2 + 0.002);
+    unit.add(mic);
   });
   const mute = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.1, 0.16, 4, 0.04), grey);
-  mute.position.set(0.9, 1.37, 0.1);
-  device.add(mute);
-
-  /* Sensor dock underneath. */
-  const dock = new THREE.Mesh(new RoundedBoxGeometry(3.25, 0.62, 1.55, 8, 0.24), dockMat);
-  dock.position.set(0, -1.68, -0.1);
-  dock.castShadow = true;
-  device.add(dock);
-  const led = new THREE.Mesh(new THREE.CircleGeometry(0.045, 20), new THREE.MeshBasicMaterial({ color: RED }));
-  led.position.set(1.25, -1.68, 0.656);
-  device.add(led);
-
-  const port = new THREE.Mesh(new RoundedBoxGeometry(0.34, 0.12, 0.2, 4, 0.05),
-    new THREE.MeshStandardMaterial({ color: "#2a2b2f", roughness: 0.4 }));
-  port.position.set(0, -1.36, 0.1);
-  device.add(port);
-  const strip = new THREE.Mesh(new RoundedBoxGeometry(2.6, 0.2, 0.02, 4, 0.06), glass);
-  strip.position.set(0, -1.66, 0.66);
-  device.add(strip);
-  led.position.z = 0.68;
+  mute.position.set(0.95, UNIT_H + 0.02, 0);
+  unit.add(mute);
 
   /* Soft contact shadow. */
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ opacity: 0.14 }));
   floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -2.0;
+  floor.position.y = -2.13;
   floor.receiveShadow = true;
   scene.add(floor);
 
@@ -159,7 +175,7 @@ async function start() {
     const e = 1 - Math.pow(1 - enter, 4);
     device.rotation.y = (-0.9 + targetY) * (1 - e) + (targetY * 0.6 - 0.16) * e + dragY + (reduce ? 0 : Math.sin(t * 0.5) * 0.05);
     device.rotation.x = targetX * 0.6 + (reduce ? 0 : Math.sin(t * 0.7) * 0.02);
-    device.position.y = (reduce ? 0 : Math.sin(t * 0.9) * 0.06) - (1 - e) * 0.6;
+    device.position.y = -2.0 + (reduce ? 0 : Math.sin(t * 0.9) * 0.04) - (1 - e) * 0.6;
     texture.needsUpdate = true;
     renderer.render(scene, camera);
   }

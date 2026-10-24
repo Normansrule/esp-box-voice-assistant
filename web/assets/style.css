@@ -186,7 +186,7 @@ section { position: relative; }
 }
 .mute-switch::after { content: ""; position: absolute; top: 3px; left: 5px; width: 16px; height: 6px; border-radius: 3px; background: #8a8f98; transition: left .2s var(--ease), background .2s; }
 .mute-switch[aria-pressed="true"]::after { left: 25px; background: var(--red); }
-.device-caption { display: flex; justify-content: space-between; gap: 12px; margin-top: 18px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.device-caption { display: flex; justify-content: space-between; gap: 12px; margin-top: 22px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
 .state-badge { display: inline-flex; align-items: center; gap: 8px; font: 650 12px/1 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--text); }
 .state-badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px rgba(138, 143, 152, .18); }
 .state-badge.live i { background: var(--red); box-shadow: 0 0 0 4px rgba(232, 54, 45, .2); animation: pulse 1.2s infinite; }
@@ -339,3 +339,14 @@ footer .wrap { display: flex; gap: 20px; justify-content: space-between; flex-wr
 .steps code { font-size: 12.5px; }
 .disclosure { margin: 34px 0 0; text-align: center; font-size: 13.5px; color: var(--text); }
 .fineprint { margin: 8px auto 0; text-align: center; font-size: 12.5px; color: var(--muted); max-width: 80ch; }
+
+/* ---------------- BOX-3-DOCK (teal wedge) under the simulated device ---------------- */
+.device { z-index: 1; }
+.device-dock { position: relative; max-width: 660px; margin: -26px auto 0; height: 88px; }
+.dock-top { position: absolute; left: 3%; right: 3%; top: 0; height: 36px; background: linear-gradient(#9ad3e3, #6dbbd3);
+  clip-path: polygon(2.5% 0, 97.5% 0, 100% 100%, 0 100%); }
+.dock-face { position: absolute; left: 0; right: 0; top: 36px; height: 52px; border-radius: 4px 4px 22px 22px;
+  background: linear-gradient(#4fa9c9, #2f86a8); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), 0 30px 50px -28px rgba(20, 70, 90, .6); }
+.dock-usb { position: absolute; right: -4px; top: 52px; width: 8px; height: 20px; border-radius: 4px; background: #1e1f22; }
+.mini-device.with-dock .mini-base { background: linear-gradient(#5fb2cf, #2f86a8); box-shadow: inset 0 3px 0 #9ad3e3, 0 16px 30px -18px rgba(20, 70, 90, .55); }
+.mini-device:not(.with-dock) .mini-base { background: linear-gradient(#5fb2cf, #3a93b5); }

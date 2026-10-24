@@ -168,7 +168,7 @@ def svg(w, h, body, title):
 
 def hero():
     """Banner whose face cross-fades through expressions and blinks (CSS, no JS)."""
-    W, H = 1280, 520
+    W, H = 1280, 600
     seq = ["neutral", "happy", "curious", "wink", "love", "starry", "playful"]
     n = len(seq)
     dur = n * 2.4
@@ -186,20 +186,13 @@ def hero():
         keyframes.append(".f0{opacity:1}")
     style = ("<style>.f{opacity:0}%s@media (prefers-reduced-motion:reduce){.f{animation:none}.f0{opacity:1}}</style>"
              % "".join(keyframes))
-    sx, sy, sc = 760, 92, 1.36
+    sx, sy, sc = 742, 92, 1.3
     sw, sh = 320 * sc, 240 * sc
     body = [style,
             '<rect width="%d" height="%d" fill="#fff"/>' % (W, H),
-            '<ellipse cx="%g" cy="%g" rx="420" ry="260" fill="url(#glow)"/>' % (sx + sw / 2, sy + sh / 2),
-            '<rect x="%g" y="%g" width="%g" height="%g" rx="44" fill="#ECEDF0" stroke="#D8D9DE"/>'
-            % (sx - 34, sy - 40, sw + 68, sh + 86),
-            '<rect x="%g" y="%g" width="%g" height="%g" rx="18" fill="#0d0e10"/>' % (sx - 12, sy - 12, sw + 24, sh + 24),
-            '<circle cx="%g" cy="%g" r="4" fill="#BFC1C7"/><circle cx="%g" cy="%g" r="4" fill="#BFC1C7"/>'
-            % (sx + sw * 0.4, sy - 26, sx + sw * 0.6, sy - 26),
-            '<svg x="%g" y="%g" width="%g" height="%g" viewBox="0 0 320 240"><rect width="320" height="240" fill="#fff"/>%s</svg>'
-            % (sx, sy, sw, sh, "".join(frames)),
-            '<text x="%g" y="%g" text-anchor="middle" font-family="%s" font-size="11" letter-spacing="3" '
-            'font-weight="700" fill="#A0A3AA">ESP32-S3-BOX-3</text>' % (sx + sw / 2, sy + sh + 32, FONT),
+            '<ellipse cx="%g" cy="%g" rx="420" ry="260" fill="url(#glow)"/>' % (sx + sw / 2, sy + sh / 2)]
+    body += docked_device(sx, sy, sc, "".join(frames))
+    body += [
             '<text x="80" y="150" font-family="%s" font-size="17" font-weight="600" fill="%s">'
             'ESP-BOX Voice &#183; Desk Buddy firmware v%s</text>' % (FONT, RED, DATA["firmware"]["version"]),
             '<text x="74" y="290" font-family="%s" font-size="148" font-weight="700" letter-spacing="-6" fill="%s">'
@@ -211,6 +204,71 @@ def hero():
             % (FONT, len(DATA["emotions"])),
             ]
     return svg(W, H, "".join(body), "ESP-BOX Voice: Hi E.S.P.")
+
+
+def docked_device(sx, sy, sc, frames, caption=True):
+    """The BOX-3 seated in its teal BOX-3-DOCK, seen from slightly above."""
+    sw, sh = 320 * sc, 240 * sc
+    ux0, ux1 = sx - 30 * sc / 1.3, sx + sw + 30 * sc / 1.3
+    uy0, uy1 = sy - 40 * sc / 1.3, sy + sh + 52 * sc / 1.3
+    dx0, dx1 = ux0 - 22, ux1 + 22
+    dtop = uy1 - 14
+    dface = dtop + 36
+    dbot = dface + 70
+    out = [
+        '<defs><linearGradient id="shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FDFDFE"/>'
+        '<stop offset="1" stop-color="#E4E5E9"/></linearGradient>'
+        '<linearGradient id="dockface" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4FA9C9"/>'
+        '<stop offset="1" stop-color="#2F86A8"/></linearGradient>'
+        '<linearGradient id="docktop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9AD3E3"/>'
+        '<stop offset="1" stop-color="#6DBBD3"/></linearGradient></defs>',
+        '<ellipse cx="%g" cy="%g" rx="%g" ry="16" fill="#000" opacity=".10" filter="url(#blur)"/>'
+        % ((dx0 + dx1) / 2, dbot + 6, (dx1 - dx0) / 2 + 10),
+        '<path d="M%g %g L%g %g L%g %g L%g %g Z" fill="url(#docktop)"/>'
+        % (dx0 + 16, dtop, dx1 - 16, dtop, dx1, dface, dx0, dface),
+        '<path d="M%g %g L%g %g Q%g %g %g %g L%g %g Q%g %g %g %g Z" fill="url(#dockface)"/>'
+        % (dx0, dface, dx1, dface, dx1 + 2, dbot, dx1 - 22, dbot, dx0 + 22, dbot, dx0 - 2, dbot, dx0, dface),
+        '<rect x="%g" y="%g" width="%g" height="3" rx="1.5" fill="#fff" opacity=".35"/>' % (dx0 + 18, dface + 2, dx1 - dx0 - 36),
+        '<rect x="%g" y="%g" width="9" height="20" rx="4" fill="#1E1F22"/>' % (dx1 - 6, dface + 22),
+        '<rect x="%g" y="%g" width="%g" height="%g" rx="%g" fill="url(#shell)" stroke="#D8D9DE"/>'
+        % (ux0, uy0, ux1 - ux0, uy1 - uy0, 44 * sc / 1.3),
+        '<rect x="%g" y="%g" width="%g" height="%g" rx="18" fill="#0d0e10"/>' % (sx - 12, sy - 12, sw + 24, sh + 24),
+        '<circle cx="%g" cy="%g" r="4" fill="#BFC1C7"/><circle cx="%g" cy="%g" r="4" fill="#BFC1C7"/>'
+        % (sx + sw * 0.4, sy - 26 * sc / 1.3, sx + sw * 0.6, sy - 26 * sc / 1.3),
+        '<rect x="%g" y="%g" width="44" height="9" rx="4" fill="#C9CACF"/>' % (ux1 - 120 * sc / 1.3, uy0 - 6),
+        '<svg x="%g" y="%g" width="%g" height="%g" viewBox="0 0 320 240"><rect width="320" height="240" fill="#fff"/>%s</svg>'
+        % (sx, sy, sw, sh, frames),
+        '<text x="%g" y="%g" text-anchor="middle" font-family="%s" font-size="11" letter-spacing="3" '
+        'font-weight="700" fill="#A0A3AA">ESP32-S3-BOX-3</text>' % (sx + sw / 2, sy + sh + 32 * sc / 1.3, FONT),
+    ]
+    if caption:
+        out.append('<text x="%g" y="%g" text-anchor="middle" font-family="%s" font-size="12" fill="%s">'
+                   'Illustration: BOX-3 in its BOX-3-DOCK, face rendered from the firmware</text>'
+                   % ((dx0 + dx1) / 2, dbot + 40, FONT, MUTED))
+    return out
+
+
+def face_cycle(seq, dur_each=2.4):
+    """Cross-fading face frames (CSS only) plus the style block that drives them."""
+    n = len(seq)
+    dur = n * dur_each
+    frames = "".join('<g class="f f%d">%s</g>' % (i, face_svg(POSES[name])) for i, name in enumerate(seq))
+    kf = []
+    for i in range(n):
+        a, b = i / n * 100, (i + 1) / n * 100
+        kf.append("@keyframes k%d{0%%{opacity:0}%.2f%%{opacity:0}%.2f%%{opacity:1}%.2f%%{opacity:1}"
+                  "%.2f%%{opacity:0}100%%{opacity:0}}.f%d{animation:k%d %gs infinite}"
+                  % (i, max(0, a - 1.5), a + 1.5, b - 1.5, min(100, b + 1.5), i, i, dur))
+    style = ("<style>.f{opacity:0}.f0{opacity:1}%s@media (prefers-reduced-motion:reduce){.f{animation:none}"
+             ".f0{opacity:1}}</style>" % "".join(kf))
+    return style, frames
+
+
+def device_only():
+    """Standalone docked BOX-3 with its face cycling, for the Connect app."""
+    style, frames = face_cycle(["neutral", "happy", "listening", "wink", "curious", "love", "speaking", "starry"])
+    body = [style] + docked_device(60, 70, 1.0, frames, caption=False)
+    return svg(500, 480, "".join(body), "ESP32-S3-BOX-3 in its dock, showing the Desk Buddy face")
 
 
 def expressions():
@@ -333,6 +391,9 @@ def main():
                      ("voice-states.svg", voice_states), ("architecture.svg", architecture)):
         (OUT / name).write_text(fn(), encoding="utf-8", newline="\n")
         print("wrote docs/assets/" + name)
+    # The Connect page (and the desktop app built from it) shows the same device.
+    (ROOT / "web" / "connect" / "device.svg").write_text(device_only(), encoding="utf-8", newline=chr(10))
+    print("wrote web/connect/device.svg")
 
 
 if __name__ == "__main__":

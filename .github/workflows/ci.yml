@@ -55,7 +55,7 @@ jobs:
       - run: python tools/extract_firmware_data.py --check
       - run: |
           python tools/render_readme_art.py
-          git diff --exit-code -- docs/assets
+          git diff --exit-code -- docs/assets web/connect/device.svg
       - name: No secrets committed
         run: |
           test ! -e spiffs/openai_key.txt

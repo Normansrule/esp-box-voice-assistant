@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=4">
+<link rel="stylesheet" href="assets/style.css?v=6">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -50,7 +50,7 @@
     <div class="hotspots" aria-hidden="true">
       <span class="hs hs-screen"><b>2.4&Prime; 320&times;240 touch</b>LVGL face, drawn from shapes</span>
       <span class="hs hs-mic"><b>Two microphones</b>Wake word on the chip</span>
-      <span class="hs hs-dock"><b>BOX-3-SENSOR dock</b>Temperature, humidity, radar</span>
+      <span class="hs hs-dock"><b>BOX-3-DOCK</b>Tilts it back, USB-C on the side</span>
     </div>
   </div>
   <div class="wrap hero-foot">
@@ -60,7 +60,7 @@
       <a class="btn btn-ghost" href="#simulator">Try the simulator</a>
       <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
     </div>
-    <p class="stage-note">Illustration of the ESP32-S3-BOX-3 on its sensor dock. The screen is a live browser simulation of the firmware, replaying real offline replies. Drag to turn, click to poke.</p>
+    <p class="stage-note">Illustration of the ESP32-S3-BOX-3 in its BOX-3-DOCK. The screen is a live browser simulation of the firmware, replaying real offline replies. Drag to turn, click to poke.</p>
   </div>
 </header>
 
@@ -116,6 +116,7 @@
           </div>
           <span class="device-logo" aria-hidden="true">ESP32-S3-BOX-3</span>
         </div>
+        <div class="device-dock" aria-hidden="true"><i class="dock-top"></i><i class="dock-face"></i><i class="dock-usb"></i></div>
         <div class="device-caption">
           <span class="state-badge" id="state-badge"><i></i><span id="state-text">Idle</span></span>
           <span>Simulated 320&times;240 panel &middot; not a live device</span>
@@ -243,10 +244,10 @@
   </div>
 </footer>
 
-<script src="assets/firmware-data.js?v=4"></script>
-<script src="assets/face.js?v=4"></script>
-<script src="assets/sim.js?v=4"></script>
-<script src="assets/shop.js?v=4"></script>
-<script type="module" src="assets/device3d.js?v=4"></script>
+<script src="assets/firmware-data.js?v=6"></script>
+<script src="assets/face.js?v=6"></script>
+<script src="assets/sim.js?v=6"></script>
+<script src="assets/shop.js?v=6"></script>
+<script type="module" src="assets/device3d.js?v=6"></script>
 </body>
 </html>
