@@ -139,7 +139,8 @@ class ToolLoop(unittest.TestCase):
                          ["calculate", "date_info", "add_time", "convert_units"])
         # The box's personality first, then the tool instructions.
         self.assertEqual(request["messages"][0]["content"], "be a robot")
-        self.assertIn("never guess", request["messages"][1]["content"])
+        self.assertIn("never make one up", request["messages"][1]["content"])
+        self.assertIn("never guess", request["messages"][2]["content"])
 
     def test_a_failed_tool_does_not_override_the_answer(self):
         mind = ScriptedOllama([tool_call("calculate", expression="William Shakespeare"),
@@ -150,7 +151,7 @@ class ToolLoop(unittest.TestCase):
     def test_endless_tool_calls_are_cut_off(self):
         mind = ScriptedOllama([tool_call("calculate", expression="1+1")] * 10)
         text, _ = mind.reply(QUESTION, 160, 0.7)
-        self.assertLessEqual(len(mind.requests), home_brain.OllamaMind.MAX_TOOL_ROUNDS + 1)
+        self.assertLessEqual(len(mind.requests), home_brain.OllamaMind.MAX_REQUESTS)
         self.assertTrue(text.startswith("["))
 
     def test_thinking_asks_for_room_to_think(self):
@@ -160,6 +161,79 @@ class ToolLoop(unittest.TestCase):
         self.assertTrue(mind.requests[0]["think"])
         self.assertGreater(mind.requests[0]["options"]["num_predict"], 160)
         self.assertEqual(text, "[curious] Four.")
+
+    def test_a_vague_answer_after_a_tool_is_composed_afresh(self):
+        # Live, llama3.2 answered "That's correct." after converting units.
+        mind = ScriptedOllama([tool_call("convert_units", value=750, from_unit="ml", to_unit="cup"),
+                               says("[neutral] That's correct."),
+                               says("[happy] 750 millilitres is about 3.17 cups.")])
+        question = [{"role": "system", "content": "be a robot"},
+                    {"role": "user", "content": "How many cups is 750 millilitres?"}]
+        text, _ = mind.reply(question, 160, 0.7)
+        self.assertEqual(text, "[happy] 750 millilitres is about 3.17 cups.")
+        fresh = mind.requests[-1]
+        self.assertNotIn("tools", fresh)
+        self.assertEqual(len(fresh["messages"]), 2, "the fresh answer must not drag the chat along")
+        self.assertIn("750 ml is 3.17 cups", fresh["messages"][1]["content"])
+
+    def test_questions_without_numbers_are_not_offered_tools(self):
+        mind = ScriptedOllama([says("[neutral] Canberra.")])
+        mind.reply([{"role": "user", "content": "What is the capital of Australia?"}], 160, 0.7)
+        self.assertNotIn("tools", mind.requests[0])
+
+    def test_a_leaked_tool_call_is_never_said(self):
+        mind = ScriptedOllama([says('{"name":"calculate","parameters{"}'),
+                               says('{"name":"calculate","parameters":{}}')])
+        text, _ = mind.reply(QUESTION, 160, 0.7)
+        self.assertNotIn("{", text)
+        self.assertNotIn("tools", mind.requests[1], "the retry must be without tools")
+
+
+class Routing(unittest.TestCase):
+    def test_which_questions_get_tools(self):
+        for question in ("What is 17 percent of 2350?", "How many days until Christmas?",
+                         "How many cups is a litre?", "What is three times seven?",
+                         "When should I leave for a 6:50 flight?"):
+            self.assertTrue(tools.question_needs_tools(question), question)
+        for question in ("Why is the sky blue?", "Who wrote Romeo and Juliet?",
+                         "Is it warm in here?", "Is a dolphin a fish?"):
+            self.assertFalse(tools.question_needs_tools(question), question)
+
+    def test_box_readings_move_out_of_the_question(self):
+        messages = [{"role": "system", "content": "be a robot"},
+                    {"role": "user", "content": "Is it hot?\n[box: room 30.0 C; humidity 50%]"},
+                    {"role": "assistant", "content": "[happy] Yes."},
+                    {"role": "user", "content": "And now?\n[box: room 21.0 C; humidity 40%]"}]
+        cleaned, line = tools.split_box_context(messages)
+        self.assertEqual(line, "[box: room 21.0 C; humidity 40%]", "the newest reading wins")
+        self.assertEqual(cleaned[1]["content"], "Is it hot?")
+        self.assertEqual(cleaned[3]["content"], "And now?")
+        restated = tools.restate_box_context(cleaned, line)
+        self.assertEqual(restated[3]["content"],
+                         "And now?\n(My own sensors right now: room 21.0 C; humidity 40%.)")
+        self.assertEqual(tools.latest_question(restated), "And now?")
+
+    def test_tidy_drops_role_names_and_invented_moods(self):
+        self.assertEqual(tools.tidy_for_speech("assistant [neutral] Canberra."), "[neutral] Canberra.")
+        self.assertEqual(tools.tidy_for_speech("[neutral] [low] Battery at 12%."),
+                         "[neutral] Battery at 12%.")
+        self.assertEqual(tools.tidy_for_speech("[comfortable] [happy] Nice."), "[happy] Nice.")
+
+    def test_a_date_only_conflicts_over_weekdays_and_day_counts(self):
+        today = "Saturday 24 October 2026, today"
+        self.assertTrue(tools.answer_agrees_with_tool("My battery is about 12 percent.", today))
+        self.assertFalse(tools.answer_agrees_with_tool("It is a Monday.", today))
+        self.assertFalse(tools.answer_agrees_with_tool("Only 60 days to go!",
+                                                       "Friday 25 December 2026, in 62 days"))
+        self.assertTrue(tools.answer_agrees_with_tool("62 days to go!",
+                                                      "Friday 25 December 2026, in 62 days"))
+
+    def test_trivial_tool_calls_do_not_count(self):
+        self.assertFalse(tools.tool_call_is_meaningful("calculate", {"expression": "12%"}))
+        self.assertFalse(tools.tool_call_is_meaningful("calculate", {"expression": "27"}))
+        self.assertTrue(tools.tool_call_is_meaningful("calculate", {"expression": "3*12-5"}))
+        self.assertFalse(tools.tool_call_is_meaningful("convert_units",
+                                                       {"value": 27, "from_unit": "C", "to_unit": "C"}))
 
 
 if __name__ == "__main__":

@@ -222,8 +222,9 @@ def _schema(name, description, properties, required):
 
 
 TOOL_SCHEMAS = [
-    _schema("calculate", "Work out arithmetic exactly. Use for ANY sum, percentage, "
-            "or maths; never do arithmetic in your head.",
+    _schema("calculate", "Work out arithmetic exactly. Use only when the question needs "
+            "a sum, percentage or maths; never do that arithmetic in your head. Do not "
+            "use it for questions without numbers.",
             {"expression": {"type": "string",
                             "description": "e.g. '17 * 23', '15% of 80' as '0.15*80', 'sqrt(2)'"}},
             ["expression"]),
@@ -247,6 +248,93 @@ _TOOLS = {"calculate": lambda a: calculate(a["expression"]),
           "convert_units": lambda a: convert_units(a["value"], a["from_unit"], a["to_unit"])}
 
 
+def tool_call_is_meaningful(name, arguments):
+    """
+    Whether a tool result is worth overriding the model's answer with.
+
+    A calculation with no operation in it ("12%", "27") only restates a number
+    the model already had; in live testing that is exactly how a correct
+    "about 12% battery" got replaced by "That comes to 0.12". Converting a unit
+    to itself is the same kind of no-op.
+    """
+    if name == "calculate":
+        expression = str((arguments or {}).get("expression", ""))
+        stripped = re.sub(r"^\s*\d[\d,.]*\s*(%|percent)?\s*$", "", expression)
+        return bool(stripped) and bool(re.search(r"[-+*/^×÷]|\bof\b|[a-z]\(", expression))
+    if name == "convert_units":
+        a = arguments or {}
+        return _unit(a.get("from_unit", "")) != _unit(a.get("to_unit", ""))
+    return True
+
+
+def answer_ignores_tool(answer, tool_result):
+    """An answer with no number or weekday in it, after a tool found one."""
+    weekdays = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    return (bool(_numbers(tool_result)) and not _numbers(_MOOD.sub("", answer or "", count=1))
+            and not any(day in (answer or "").lower() for day in weekdays))
+
+
+def compose_prompt(question, results):
+    """
+    A fresh, short request to answer from exact results, used when the model's
+    own answer ignored them. Deliberately not a continuation of the chat.
+    """
+    return ("Question: %s\nExact results already worked out: %s\nAnswer the question in "
+            "one short, friendly sentence that uses the exact result. Start with a mood "
+            "tag." % (question, "; ".join(results)))
+
+
+def looks_like_a_leaked_tool_call(text):
+    """True for an answer that is really a tool call written out as JSON."""
+    stripped = _MOOD.sub("", (text or "").strip(), count=1).strip()
+    # Loose on purpose: the leaked JSON is often malformed ("parameters{").
+    return stripped.startswith("{") and "name" in stripped and (
+        "parameters" in stripped or "arguments" in stripped)
+
+
+_NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+                 "ten", "eleven", "twelve", "fifteen", "twenty", "thirty", "forty", "fifty",
+                 "hundred", "thousand", "million", "half", "quarter", "twice", "double",
+                 "dozen", "percent")
+_TOOL_CUES = ("how many", "how much", "how long", "how far", "what time", "when ",
+              "what day", "which day", "days until", "days till", "until ", "convert",
+              "in celsius", "in fahrenheit", "times", "divided", "plus", "minus",
+              "square root", "average", "total", "per ", "split", "share")
+_UNIT_WORDS = tuple(sorted(set(list(_UNITS) + list(_ALIASES)), key=len, reverse=True))
+
+
+def latest_question(messages):
+    """The newest user message, without any readings appended to it."""
+    for message in reversed(messages):
+        if message.get("role") == "user" and isinstance(message.get("content"), str):
+            return message["content"].split("\n(My own sensors right now:", 1)[0]
+    return ""
+
+
+def question_needs_tools(question):
+    """
+    Whether to offer the calculator, date, time and unit tools at all.
+
+    Generous: a false yes only costs the model the chance to call a tool it
+    does not need. A false no costs an exact answer, so anything with a digit,
+    a number word, a date or a unit in it gets the tools.
+    """
+    text = " %s " % (question or "").lower()
+    if re.search(r"\d", text):
+        return True
+    if any(re.search(r"\b%s\b" % re.escape(word), text) for word in _NUMBER_WORDS):
+        return True
+    if any(cue in text for cue in _TOOL_CUES):
+        return True
+    months = ("january", "february", "march", "april", "may ", "june", "july", "august",
+              "september", "october", "november", "december", "christmas", "birthday",
+              "tomorrow", "yesterday", "weekend", "next week")
+    if any(month in text for month in months):
+        return True
+    return any(re.search(r"\b%s\b" % re.escape(unit), text)
+               for unit in _UNIT_WORDS if len(unit) > 2)
+
+
 def tool_answer_sentence(name, result):
     """A tool's result as a sentence the box can say on its own."""
     if name == "calculate":
@@ -268,13 +356,31 @@ def answer_agrees_with_tool(answer, tool_result):
     wanted = _numbers(tool_result)
     if not wanted:
         return True
+
+    # Only a CONFLICT counts. An answer with no number (or weekday) in it did
+    # not use the tool at all: "It's quite warm in here" or "Canberra" are
+    # answers in their own right, and live testing showed that replacing them
+    # with the tool's line ("27.5°C is 81.5°F") made them worse, not better.
+    weekdays = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+    if not _numbers(answer) and not any(day in (answer or "").lower() for day in weekdays):
+        return True
     # The answer is the LAST number in a result ("750 ml is 3.17 cup" -> 3.17),
     # except for dates, where the day count is what matters.
     key = re.findall(r"-?\d[\d,]*\.?\d*", tool_result.replace(",", ""))
     key = [k.rstrip(".") for k in key]
     weekday = tool_result.split(" ", 1)[0]
     if weekday in ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"):
-        return weekday.lower() in (answer or "").lower() or key[-1] in _numbers(answer)
+        # A date only CONFLICTS over a weekday or a day count. "About 12
+        # percent" is not a disagreement with "Saturday 24 October, today",
+        # which is how a battery answer once became a date.
+        said = (answer or "").lower()
+        named = [d for d in weekdays if d in said]
+        if named and weekday.lower() not in named:
+            return False
+        counts = re.findall(r"(\d[\d,]*)\s+days?", said)
+        if counts and key[-1] not in [c.replace(",", "") for c in counts]:
+            return False
+        return True
     if ":" in tool_result and ("AM" in tool_result or "PM" in tool_result):
         clock = re.search(r"\d{1,2}:\d{2}", tool_result.split(" is ", 1)[-1]).group(0)
         return clock in (answer or "")
@@ -289,6 +395,63 @@ def run_tool(name, arguments):
         return str(_TOOLS[name](arguments or {}))
     except Exception as error:
         return "error: %s" % error
+
+
+_BOX_LINE = re.compile(r"\s*\[box: [^\]\n]*\]\s*$")
+
+
+def split_box_context(messages):
+    """
+    Take the "[box: ...]" readings line off every user message.
+
+    The box adds one to each question in Home AI mode (voice_box_context.c),
+    and keeps them in its history, so earlier turns carry old ones. Returns
+    the cleaned messages and the NEWEST line, or None when there is none.
+    """
+    cleaned, newest = [], None
+    for message in messages:
+        content = message.get("content")
+        if message.get("role") == "user" and isinstance(content, str):
+            found = _BOX_LINE.search(content)
+            if found:
+                newest = found.group(0).strip()
+                message = dict(message, content=content[:found.start()].rstrip())
+        cleaned.append(message)
+    return cleaned, newest
+
+
+def restate_box_context(messages, box_line):
+    """Put the readings, in plain words, after the newest user question."""
+    readings = box_line[len("[box: "):-1]
+    for index in range(len(messages) - 1, -1, -1):
+        if messages[index].get("role") == "user":
+            updated = list(messages)
+            updated[index] = dict(messages[index], content="%s\n(My own sensors right now: %s.)"
+                                  % (messages[index]["content"], readings))
+            return updated
+    return messages
+
+
+def box_context_instruction(box_line):
+    """How the model is told about the box's readings."""
+    readings = box_line[len("[box: "):-1]
+    return ("Live readings from your own sensors right now: %s. They are real "
+            "measurements, except the battery percentage, which is an estimate. Use "
+            "them when the question is about the room, the time, your battery, or "
+            "whether to open a window or put on a jumper. Do not mention them "
+            "otherwise, and never invent a reading that is not listed. Say a percentage "
+            "as a percentage (\"about 12 percent\"), never as a fraction." % readings)
+
+
+# Always given, tools or not. In live testing llama3.2 once answered "What will
+# the weather be tomorrow?" with an invented forecast ("mostly sunny, 22°C").
+# Worded with care: a blunter "you have no internet" made llama3.2 refuse
+# "Why is the sky blue?" because it decided it knew nothing about the world.
+HONESTY_RULES = (
+    "Answer general knowledge, science and history questions confidently from what "
+    "you know. The one thing you cannot do is look anything up: you have no live "
+    "weather forecast, news, sports scores or prices, so if asked for one, say "
+    "plainly that you cannot check it, and never make one up.")
 
 
 def tools_instruction(now=None):
@@ -318,14 +481,21 @@ def tidy_for_speech(text, max_chars=220):
     and cut at a sentence boundary when it runs long.
     """
     text = _THINK.sub("", text or "")
+    # llama3.2 sometimes opens with the role name after a mid-chat instruction.
+    text = re.sub(r"^\s*assistant\s*:?\s*", "", text, flags=re.I)
     if "</think>" in text.lower():                 # An unclosed opening tag.
         text = text[text.lower().rindex("</think>") + len("</think>"):]
 
     mood = "neutral"
+    # Every bracketed word at the front comes off; the first real mood wins.
+    # Models invent moods ("[low]", "[comfortable]") and stack them, and an
+    # invented one would otherwise be read aloud.
     found = _MOOD.match(text)
-    if found and found.group(1).lower() in MOODS:
-        mood = found.group(1).lower()
+    while found:
+        if found.group(1).lower() in MOODS and mood == "neutral":
+            mood = found.group(1).lower()
         text = text[found.end():]
+        found = _MOOD.match(text)
 
     text = re.sub(r"[*_`#]+", "", text)                    # bold, italics, code, headings
     text = re.sub(r"^\s*([-•]|\d+[.)])\s+", "", text, flags=re.M)   # list markers

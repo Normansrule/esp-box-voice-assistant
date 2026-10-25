@@ -61,6 +61,7 @@ idf_component_register(
         "voice/voice_speech_parts.c"
         "voice/voice_speech_gate.c"
         "voice/voice_router.c"
+        "voice/voice_box_context.c"
         "voice/voice_recorder.c"
         "voice/voice_wakeword.c"
         "voice/voice_local_brain.c"

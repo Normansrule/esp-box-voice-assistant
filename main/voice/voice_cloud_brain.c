@@ -21,8 +21,11 @@
 #include "buddy_api_key.h"
 #include "buddy_config.h"
 #include "buddy_settings.h"
+#include "hw_battery.h"
+#include "hw_sensors.h"
 #include "net_time.h"
 #include "net_wifi.h"
+#include "voice_box_context.h"
 #include "voice_cloud_brain.h"
 #include "voice_local_brain.h"
 #include "voice_mood_tag.h"
@@ -104,11 +107,6 @@ static bool using_home_brain(void)
     return buddy_settings_get()->brain_mode == BUDDY_BRAIN_HOME_AI;
 }
 
-/** What to call the brain in a spoken failure, so the owner knows which one. */
-static const char *brain_name(void)
-{
-    return using_home_brain() ? "my home brain" : "my online brain";
-}
 
 /**
  * @brief Tidy the typed home brain address into what the client expects.
@@ -476,6 +474,48 @@ static void release_previous_speech(void)
 }
 
 /**
+ * @brief Gather the readings the box really has into a "[box: ...]" line.
+ *
+ * Each source is asked whether it has a reading at all; one that does not is
+ * left out rather than reported as zero.
+ */
+static size_t describe_the_box(char *out, size_t out_size)
+{
+    const buddy_settings_t *settings = buddy_settings_get();
+    voice_box_context_t context = {0};
+
+    if (net_time_is_synchronised()) {
+        const time_t now = time(NULL);
+        localtime_r(&now, &context.local_time);
+        context.have_time = true;
+    }
+
+    const hw_sensor_reading_t room = hw_sensors_read_environment();
+    if (room.valid) {
+        context.have_room = true;
+        context.fahrenheit = (settings->temperature_unit == BUDDY_TEMPERATURE_FAHRENHEIT);
+        context.temperature = context.fahrenheit
+                                  ? hw_sensors_celsius_to_fahrenheit(room.temperature_celsius)
+                                  : room.temperature_celsius;
+        context.humidity_percent = room.humidity_percent;
+    }
+
+    const hw_battery_reading_t battery = hw_battery_read();
+    if (battery.available) {
+        context.have_battery = true;
+        context.battery_percent_estimate = battery.percent_est;
+        context.battery_low = battery.low;
+    }
+
+    if (hw_sensors_is_dock_present()) {
+        context.have_presence = true;
+        context.someone_nearby = hw_sensors_is_someone_nearby();
+    }
+
+    return voice_box_context_format(&context, out, out_size);
+}
+
+/**
  * @brief Run one question all the way through the three services.
  */
 static void process_question(const cloud_request_t *request)
@@ -572,7 +612,23 @@ static void process_question(const cloud_request_t *request)
     ESP_LOGI(TAG, "Step 2/3: asking %s",
              using_home_brain() ? "the home brain" : BUDDY_CLOUD_CHAT_MODEL);
 
-    answer_response = s_chat->message(s_chat, transcription, true /* keep history */);
+    /*
+     * The home brain also gets the box's live readings, so "is it warm in
+     * here?" is answered from the sensor rather than guessed. OpenAI does not:
+     * it is a third party. See voice_box_context.h.
+     */
+    char question[BUDDY_QUESTION_TEXT_MAX_LEN + 160];
+    snprintf(question, sizeof(question), "%s", transcription);
+    if (using_home_brain()) {
+        char context_line[160];
+        if (describe_the_box(context_line, sizeof(context_line)) > 0) {
+            strncat(question, "\n", sizeof(question) - strlen(question) - 1);
+            strncat(question, context_line, sizeof(question) - strlen(question) - 1);
+            ESP_LOGI(TAG, "With %s", context_line);
+        }
+    }
+
+    answer_response = s_chat->message(s_chat, question, true /* keep history */);
     if (answer_response == NULL) {
         report_failure(using_home_brain() ? "my home brain did not reply"
                                           : "my online brain did not reply");

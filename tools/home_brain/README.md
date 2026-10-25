@@ -42,12 +42,35 @@ not yet run for real. Nothing here is verified on the box itself yet.
 | Unit conversion (length, weight, volume, speed, time, temperature) | unit tool | VERIFIED IN TEST, LIVE ON PC |
 | Follow-up questions ("and in Fahrenheit?") | the box keeps the last 8 exchanges | UNTESTED |
 | Step-by-step reasoning (`--think`) | a reasoning model thinks first; only the answer reaches the box | VERIFIED IN TEST (scripted); UNTESTED live, needs `ollama pull qwen3:4b` |
+| Room, battery and presence ("is it warm in here?", "how's your battery?") | the box sends its live readings with each question (Home AI only, never OpenAI); battery is labelled an estimate | VERIFIED IN TEST (firmware + server), LIVE ON PC with sample readings; UNTESTED ON DEVICE |
+| Saying "I can't check that" for weather, news, prices | honesty rule | LIVE ON PC |
 
-**The tool result always wins.** In live testing llama3.2 often called the
-calculator correctly and then said a different number ("27 eggs" when the tool
-said 31). So the home brain checks: if the answer does not contain the tool's
-number, it says the tool's result instead. Of 12 test questions on the PC, 3
-were fixed this way and all 12 ended up right; without the check 3 were wrong.
+### How sure: the question bank
+
+`eval_home_brain.py` asks 30 questions (maths, reasoning, dates, clock times,
+units, knowledge, room readings, honesty) and checks what the box would say.
+With llama3.2 on Alek's PC, three runs scored **29, 28 and 28 out of 30**
+(about 94%), every answer under a second. The first version scored 25. The
+misses that remain move around between runs, which is the model rather than
+the tools: for example "25 percent off 40 dollars" sometimes comes out as $10.
+
+What made the difference, each found by the bank rather than guessed:
+
+- **The tool's number wins.** llama3.2 often called the calculator correctly
+  and then said a different number ("27 eggs" when the tool said 31). If the
+  answer contains a number that disagrees with the tool, the tool's result is
+  said instead.
+- **Tools only where numbers are.** Offered tools for everything, it called
+  the calculator for "Why is the sky blue?". Now they are offered only to
+  questions with digits, number words, dates or units in them.
+- **A fresh answer when it fumbles.** After a tool, it sometimes replied
+  "That's correct." as if you had spoken. Then the answer is rewritten from
+  just the question and the exact result.
+- **Never read out a tool call, a role name or a made-up mood.**
+
+```bash
+python tools/home_brain/eval_home_brain.py
+```
 
 What it still cannot do: anything needing the internet (weather, news, live
 scores), and anything the model simply does not know, where it may be wrong

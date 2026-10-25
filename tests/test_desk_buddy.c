@@ -47,6 +47,7 @@
 #include "voice_mood_tag.h"
 #include "voice_number_words.h"
 #include "voice_router.h"
+#include "voice_box_context.h"
 #include "voice_speech_gate.h"
 #include "voice_speech_parts.h"
 
@@ -1304,6 +1305,94 @@ TEST(home_ai_is_appended_to_the_saved_mode_numbers)
     CHECK(BUDDY_BRAIN_ALWAYS_ASK == 2);
     CHECK(BUDDY_BRAIN_HOME_AI == 3);
     CHECK(BUDDY_BRAIN_MODE_COUNT == 4);
+}
+
+/* ------------------------------------------------------------------------ */
+/* The box's live readings, for the home brain                               */
+/* ------------------------------------------------------------------------ */
+
+static voice_box_context_t a_full_context(void)
+{
+    voice_box_context_t context = {0};
+    context.have_time = true;
+    context.local_time.tm_year = 2026 - 1900;
+    context.local_time.tm_mon = 9;          /* October */
+    context.local_time.tm_mday = 24;
+    context.local_time.tm_wday = 6;         /* Saturday */
+    context.local_time.tm_hour = 17;
+    context.local_time.tm_min = 20;
+    context.have_room = true;
+    context.temperature = 22.46f;
+    context.humidity_percent = 41.2f;
+    context.have_battery = true;
+    context.battery_percent_estimate = 80;
+    context.have_presence = true;
+    context.someone_nearby = true;
+    return context;
+}
+
+TEST(box_context_says_only_what_the_box_measured)
+{
+    char line[200];
+    voice_box_context_t context = a_full_context();
+
+    CHECK(voice_box_context_format(&context, line, sizeof(line)) > 0);
+    CHECK_MSG(strcmp(line, "[box: time Sat 24 Oct 17:20; room 22.5 C; humidity 41%; "
+                           "battery about 80% (estimate); someone nearby]") == 0,
+              "got: %s", line);
+
+    /* A missing dock leaves the room and presence out, not zeros in. */
+    context.have_room = false;
+    context.have_presence = false;
+    voice_box_context_format(&context, line, sizeof(line));
+    CHECK_MSG(strstr(line, "room") == NULL && strstr(line, "nearby") == NULL, "got: %s", line);
+    CHECK(strstr(line, "battery about 80% (estimate)") != NULL);
+
+    /* The battery is always called an estimate, and says when it is low. */
+    context.battery_low = true;
+    voice_box_context_format(&context, line, sizeof(line));
+    CHECK(strstr(line, "(estimate, low)") != NULL);
+
+    /* Fahrenheit when the owner chose it. */
+    context = a_full_context();
+    context.temperature = 72.4f;
+    context.fahrenheit = true;
+    voice_box_context_format(&context, line, sizeof(line));
+    CHECK(strstr(line, "room 72.4 F") != NULL);
+}
+
+TEST(box_context_with_nothing_to_say_sends_nothing)
+{
+    char line[64] = "stale";
+    voice_box_context_t empty = {0};
+
+    CHECK(voice_box_context_format(&empty, line, sizeof(line)) == 0);
+    CHECK(line[0] == '\0');
+    CHECK(voice_box_context_format(NULL, line, sizeof(line)) == 0);
+    CHECK(voice_box_context_format(&empty, NULL, 10) == 0);
+}
+
+TEST(box_context_is_never_cut_off_mid_number)
+{
+    /*
+     * Every size from nothing to plenty: either the whole line or none of it.
+     * Half a line would hand the model "room 2" as a reading.
+     */
+    const voice_box_context_t context = a_full_context();
+    char full[200];
+    const size_t full_length = voice_box_context_format(&context, full, sizeof(full));
+
+    for (size_t size = 1; size < sizeof(full); size++) {
+        char line[200];
+        const size_t length = voice_box_context_format(&context, line, size);
+        if (size > full_length) {
+            CHECK_MSG(length == full_length && strcmp(line, full) == 0,
+                      "size %u lost part of the line", (unsigned)size);
+        } else {
+            CHECK_MSG(length == 0 && line[0] == '\0',
+                      "size %u sent a cut-off line: %s", (unsigned)size, line);
+        }
+    }
 }
 
 TEST(the_hourly_allowance_counts_and_rolls_over)
@@ -2946,6 +3035,9 @@ int main(void)
     run_home_ai_mode_falls_back_quietly_when_the_pc_is_not_set_up();
     run_home_ai_mode_still_filters_coughs_and_commands();
     run_home_ai_is_appended_to_the_saved_mode_numbers();
+    run_box_context_says_only_what_the_box_measured();
+    run_box_context_with_nothing_to_say_sends_nothing();
+    run_box_context_is_never_cut_off_mid_number();
     run_the_hourly_allowance_counts_and_rolls_over();
     run_the_allowance_survives_the_clock_jumping();
 

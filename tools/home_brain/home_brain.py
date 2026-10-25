@@ -146,6 +146,8 @@ class OllamaMind:
     """
 
     MAX_TOOL_ROUNDS = 4
+    # Tool rounds, plus one retry for a leaked tool call and one second chance.
+    MAX_REQUESTS = MAX_TOOL_ROUNDS + 3
     THINKING_TOKENS = 1024
 
     def __init__(self, base_url, model, max_tokens, use_tools=True, think=False):
@@ -186,17 +188,37 @@ class OllamaMind:
         raw is set, which the warm-up uses.
         """
         limit = min(int(max_tokens or self.max_tokens), self.max_tokens)
-        conversation = list(messages)
-        if self.use_tools and not raw:
+        # The box's live readings ride along on the question; move the newest
+        # into the instructions, so the model uses them without reading them out.
+        conversation, box_line = brain_tools.split_box_context(messages)
+        if box_line and not raw:
+            # Also restate the readings beside the question itself: in live
+            # testing llama3.2 ignored them when they were only in the system
+            # prompt, and once made up a battery level of 88 percent.
+            conversation = brain_tools.restate_box_context(conversation, box_line)
+        if not raw:
+            notes = [brain_tools.HONESTY_RULES]
+            if self.use_tools:
+                notes.append(brain_tools.tools_instruction())
+            if box_line:
+                notes.append(brain_tools.box_context_instruction(box_line))
             # After the box's personality prompt, so the box's voice still leads.
             position = 1 if conversation and conversation[0].get("role") == "system" else 0
-            conversation.insert(position, {"role": "system",
-                                           "content": brain_tools.tools_instruction()})
+            for note in reversed(notes):
+                conversation.insert(position, {"role": "system", "content": note})
 
         self.last_tool_calls = []
         self._last_good_tool = None
+        self._good_results = []
+        self._composed = ""
         used = 0
-        for _ in range(self.MAX_TOOL_ROUNDS + 1):
+        leaked_once = False
+        body_tools_off = False
+        # Tools only for questions with numbers, dates or units in them. Offered
+        # to everything, llama3.2 called the calculator for "Why is the sky
+        # blue?" and the date tool for "Who wrote Romeo and Juliet?".
+        wants_tools = brain_tools.question_needs_tools(brain_tools.latest_question(conversation))
+        for _ in range(self.MAX_REQUESTS):
             body = {
                 "model": self.model,
                 "messages": conversation,
@@ -206,7 +228,7 @@ class OllamaMind:
                 "options": {"num_predict": limit + (self.THINKING_TOKENS if self.think else 0),
                             "temperature": 0.7 if temperature is None else float(temperature)},
             }
-            if self.use_tools and not raw:
+            if self.use_tools and not raw and not body_tools_off and wants_tools:
                 body["tools"] = brain_tools.TOOL_SCHEMAS
             if self.think:
                 body["think"] = True
@@ -234,7 +256,28 @@ class OllamaMind:
                 text = message.get("content", "")
                 if raw:
                     return text.strip(), used
-                return self._trust_the_tools(brain_tools.tidy_for_speech(text)), used
+                if brain_tools.looks_like_a_leaked_tool_call(text) and not leaked_once:
+                    # llama3.2 sometimes writes the tool call as text instead of
+                    # making it. Never read that aloud: ask once more, no tools.
+                    leaked_once = True
+                    self.last_tool_calls.append("tool call leaked into the answer; asking again")
+                    body_tools_off = True
+                    continue
+                if brain_tools.looks_like_a_leaked_tool_call(text):
+                    text = "[confused] I got tangled up on that one. Could you ask it another way?"
+                tidy = brain_tools.tidy_for_speech(text)
+                if self._good_results and brain_tools.answer_ignores_tool(
+                        tidy, self._last_good_tool[1]):
+                    # The model worked something out and then answered without
+                    # it ("That's correct.", "You're welcome!"): after a tool
+                    # message llama3.2 often replies as if the user had spoken.
+                    # So write the answer afresh from the question and the
+                    # results alone, in a short prompt that is hard to misread.
+                    used += self._compose(conversation, temperature, limit)
+                    self.last_tool_calls.append("answer %r ignored the tool; composed %r"
+                                                % (tidy, self._composed))
+                    tidy = brain_tools.tidy_for_speech(self._composed)
+                return self._trust_the_tools(tidy), used
 
             conversation.append({"role": "assistant", "content": message.get("content", ""),
                                  "tool_calls": calls})
@@ -249,12 +292,30 @@ class OllamaMind:
                 result = brain_tools.run_tool(function.get("name", ""), arguments)
                 self.last_tool_calls.append("%s(%s) = %s" % (function.get("name"),
                                                              json.dumps(arguments), result))
-                if not result.startswith("error"):
+                if not result.startswith("error") and brain_tools.tool_call_is_meaningful(
+                        function.get("name", ""), arguments):
                     self._last_good_tool = (function.get("name", ""), result)
+                    self._good_results.append(self._last_good_tool)
                 conversation.append({"role": "tool", "tool_name": function.get("name", ""),
                                      "content": result})
 
         return brain_tools.tidy_for_speech("I went round in circles on that one."), used
+
+    def _compose(self, conversation, temperature, limit):
+        """Answer from scratch, given only the persona, question and tool results."""
+        persona = conversation[0]["content"] if conversation and \
+            conversation[0].get("role") == "system" else ""
+        prompt = brain_tools.compose_prompt(brain_tools.latest_question(conversation),
+                                            [result for _, result in self._good_results])
+        answer = self._chat({
+            "model": self.model, "stream": False, "keep_alive": "30m",
+            "messages": [{"role": "system", "content": persona},
+                         {"role": "user", "content": prompt}],
+            "options": {"num_predict": limit,
+                        "temperature": 0.3 if temperature is None else min(float(temperature), 0.3)},
+        })
+        self._composed = answer.get("message", {}).get("content", "")
+        return int(answer.get("prompt_eval_count", 0)) + int(answer.get("eval_count", 0))
 
     def _trust_the_tools(self, answer):
         """
@@ -595,8 +656,9 @@ def ask_once(args):
         print(error)
         return 1
     started = time.time()
+    question = args.ask + ("\n" + args.box if args.box else "")
     text, _ = mind.reply([{"role": "system", "content": BOX_SYSTEM_PROMPT},
-                          {"role": "user", "content": args.ask}], 160, 0.7)
+                          {"role": "user", "content": question}], 160, 0.7)
     for call in mind.last_tool_calls:
         print("  tool : %s" % call)
     print("answer (%.1f s): %s" % (time.time() - started, text))
@@ -604,6 +666,9 @@ def ask_once(args):
 
 
 def main(argv=None):
+    # Windows consoles default to a code page that cannot print "°C".
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="The Desk Buddy's home AI server.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--bind", default="0.0.0.0",
@@ -626,6 +691,8 @@ def main(argv=None):
     parser.add_argument("--ask", metavar="QUESTION",
                         help="answer one typed question the way the box would, then exit "
                              "(needs only Ollama; no microphone, Whisper or box)")
+    parser.add_argument("--box", metavar="LINE",
+                        help='with --ask: pretend readings, e.g. "[box: room 27.5 C; humidity 60%%]"')
     args = parser.parse_args(argv)
 
     if args.ask:
