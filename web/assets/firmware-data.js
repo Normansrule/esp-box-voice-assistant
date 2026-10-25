@@ -2168,6 +2168,14 @@ window.FIRMWARE = {
    "phrase": "are you online"
   },
   {
+   "action": "battery_level",
+   "phrase": "how is your battery"
+  },
+  {
+   "action": "battery_level",
+   "phrase": "how much battery is left"
+  },
+  {
    "action": "what_is_wake_word",
    "phrase": "what is your wake word"
   },
@@ -3275,6 +3283,12 @@ window.FIRMWARE = {
    "runtime": true
   },
   "network_status": {
+   "emotion": null,
+   "antic": false,
+   "lines": [],
+   "runtime": true
+  },
+  "battery_level": {
    "emotion": null,
    "antic": false,
    "lines": [],

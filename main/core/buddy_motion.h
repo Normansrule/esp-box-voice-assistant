@@ -29,6 +29,9 @@ esp_err_t buddy_motion_start(void);
 /** Turn the eye-follows-lean behaviour on or off (on by default). */
 void buddy_motion_set_gaze_enabled(bool enabled);
 
+/** Whether the eyes currently follow the lean. */
+bool buddy_motion_get_gaze_enabled(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -39,6 +39,11 @@ void buddy_motion_set_gaze_enabled(bool enabled)
     }
 }
 
+bool buddy_motion_get_gaze_enabled(void)
+{
+    return s_gaze_enabled;
+}
+
 static void on_gesture(hw_imu_gesture_t gesture)
 {
     s_pending |= (1u << gesture);   /* handled on the motion task */

@@ -20,10 +20,13 @@
 #include "buddy_api_key.h"
 #include "buddy_config.h"
 #include "buddy_selftest.h"
+#include "buddy_motion.h"
 #include "buddy_settings.h"
 #include "face_animator.h"
 #include "face_theme.h"
+#include "hw_battery.h"
 #include "hw_display.h"
+#include "hw_imu.h"
 #include "hw_sensors.h"
 #include "hw_speaker.h"
 #include "net_wifi.h"
@@ -318,6 +321,13 @@ static void show_readout_toggled_cb(lv_event_t *event)
     buddy_settings_get()->show_sensor_readout = on;
     buddy_settings_save();
     ui_sensor_readout_set_visible(on);
+}
+
+/* Not saved: eyes follow the lean again after a restart. */
+static void follow_tilt_toggled_cb(lv_event_t *event)
+{
+    lv_obj_t *toggle = lv_event_get_target(event);
+    buddy_motion_set_gaze_enabled(lv_obj_has_state(toggle, LV_STATE_CHECKED));
 }
 
 static void idle_antics_toggled_cb(lv_event_t *event)
@@ -1383,6 +1393,29 @@ static void build_main_page(void)
         lv_label_set_text(note, "No sensor dock attached.");
         lv_obj_set_style_text_color(note, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
         lv_obj_set_style_pad_left(note, 4, LV_PART_MAIN);
+    }
+
+    /* --- Motion and battery (UNTESTED ON DEVICE) --------------------------- */
+    create_section_heading(body, "MOTION AND BATTERY");
+    add_value_row(body, "Motion sensor", hw_imu_chip_name());
+    if (hw_imu_is_present()) {
+        add_switch_row(body, "Eyes follow tilt", buddy_motion_get_gaze_enabled(),
+                       follow_tilt_toggled_cb);
+    }
+    {
+        const hw_battery_reading_t battery = hw_battery_read();
+        char value[40];
+        if (battery.available) {
+            snprintf(value, sizeof(value), "%u.%02u V, ~%u%%",
+                     (unsigned)(battery.battery_mv / 1000), (unsigned)((battery.battery_mv % 1000) / 10),
+                     (unsigned)battery.percent_est);
+        } else {
+            snprintf(value, sizeof(value), "Needs the sensor dock");
+        }
+        add_value_row(body, "Battery", value);
+        create_note(body, "Voltage is measured; the percentage is an estimate. "
+                       "Charging only shows on the dock's LEDs. "
+                       "Tilt follow resets to on after a restart.");
     }
 
     /* --- Voice ----------------------------------------------------------- */

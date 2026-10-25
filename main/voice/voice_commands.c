@@ -146,6 +146,8 @@ static const voice_command_t s_commands[] = {
     EN(VOICE_ACTION_HOW_LONG_AWAKE,    "how long have you been on"),
     EN(VOICE_ACTION_HOW_IS_YOUR_MEMORY,"how is your memory"),
     EN(VOICE_ACTION_NETWORK_STATUS,    "are you online"),
+    EN(VOICE_ACTION_BATTERY_LEVEL,     "how is your battery"),
+    EN(VOICE_ACTION_BATTERY_LEVEL,     "how much battery is left"),
     EN(VOICE_ACTION_WHAT_IS_WAKE_WORD, "what is your wake word"),
     EN(VOICE_ACTION_GIVE_ADVICE,       "give me some advice"),
     EN(VOICE_ACTION_TELL_FORTUNE,      "read my fortune"),
@@ -322,6 +324,7 @@ const char *voice_commands_action_title(voice_action_t action)
     case VOICE_ACTION_HOW_LONG_AWAKE:   return "Ask how long it has been on";
     case VOICE_ACTION_HOW_IS_YOUR_MEMORY: return "Ask about its memory";
     case VOICE_ACTION_NETWORK_STATUS:   return "Ask if it is online";
+    case VOICE_ACTION_BATTERY_LEVEL:    return "Ask about its battery";
     case VOICE_ACTION_WHAT_IS_WAKE_WORD:return "Ask for the wake word";
     case VOICE_ACTION_GIVE_ADVICE:      return "Ask for advice";
     case VOICE_ACTION_TELL_FORTUNE:     return "Ask for a fortune";

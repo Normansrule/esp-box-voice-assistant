@@ -18,6 +18,7 @@
 #include "audio_music.h"
 #include "buddy_settings.h"
 #include "buddy_timer.h"
+#include "hw_battery.h"
 #include "hw_sensors.h"
 #include "hw_speaker.h"
 #include "net_wifi.h"
@@ -584,6 +585,28 @@ static void answer_memory(voice_reply_t *reply)
     voice_speech_plan_add(&reply->speech, VOICE_FRAGMENT_KB_INTERNAL);
 }
 
+/*
+ * The dock's 18650, measured through IO10 (see hw_battery.h). The voltage is
+ * measured; the percentage is an estimate, and the reply says "about" so the
+ * buddy never sounds surer than the hardware is. UNTESTED ON DEVICE.
+ */
+static void answer_battery(voice_reply_t *reply)
+{
+    const hw_battery_reading_t battery = hw_battery_read();
+
+    if (!battery.available) {
+        reply->emotion = FACE_EMOTION_SHEEPISH;
+        reply_set_text(reply, "I can only check the battery on the sensor dock.");
+        return;
+    }
+
+    reply->emotion = battery.low ? FACE_EMOTION_EXHAUSTED
+                   : (battery.percent_est >= 60) ? FACE_EMOTION_PROUD : FACE_EMOTION_NEUTRAL;
+    reply_set_text(reply, "My battery is at %u.%02u volts, about %u percent.",
+                   (unsigned)(battery.battery_mv / 1000), (unsigned)((battery.battery_mv % 1000) / 10),
+                   (unsigned)battery.percent_est);
+}
+
 static void answer_network(voice_reply_t *reply)
 {
     if (!net_wifi_is_connected()) {
@@ -1079,6 +1102,10 @@ bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_r
 
     case VOICE_ACTION_NETWORK_STATUS:
         answer_network(reply);
+        break;
+
+    case VOICE_ACTION_BATTERY_LEVEL:
+        answer_battery(reply);
         break;
 
     case VOICE_ACTION_WHAT_IS_WAKE_WORD:

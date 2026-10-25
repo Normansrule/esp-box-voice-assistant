@@ -157,6 +157,7 @@ typedef enum {
     VOICE_ACTION_HOW_LONG_AWAKE,    /*!< "how long have you been on"          */
     VOICE_ACTION_HOW_IS_YOUR_MEMORY,/*!< "how is your memory"                 */
     VOICE_ACTION_NETWORK_STATUS,    /*!< "are you online"                     */
+    VOICE_ACTION_BATTERY_LEVEL,     /*!< "how is your battery" (dock only)    */
     VOICE_ACTION_WHAT_IS_WAKE_WORD, /*!< "what is your wake word"             */
     VOICE_ACTION_GIVE_ADVICE,       /*!< "give me some advice"                */
     VOICE_ACTION_TELL_FORTUNE,      /*!< "read my fortune"                    */

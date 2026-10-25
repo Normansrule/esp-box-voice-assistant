@@ -248,7 +248,7 @@
   /* ---------------------------------------------------------------------- */
   const settings = {
     volume: 70, chimes: true, brightness: 90, idleAntics: true, touchAntics: true,
-    showReadout: true, fahrenheit: true, cloud: false, mode: 1, limit: G.BUDDY_DEFAULT_REQUESTS_PER_HOUR,
+    showReadout: true, fahrenheit: true, followTilt: true, cloud: false, mode: 1, limit: G.BUDDY_DEFAULT_REQUESTS_PER_HOUR,
   };
   const sensors = { temp: 22.5, hum: 44, dock: true, battMv: 3980 };
 
@@ -323,8 +323,8 @@
   /* buddy_motion.c: eyes slide towards the low side, clamped to -100..100. */
   function setTilt(xDeg, yDeg, source) {
     const c = (v) => Math.max(-100, Math.min(100, Math.trunc(v)));
-    device.gaze.x = c(xDeg * G.BUDDY_IMU_GAZE_PER_DEG);
-    device.gaze.y = c(yDeg * G.BUDDY_IMU_GAZE_PER_DEG);
+    device.gaze.x = settings.followTilt ? c(xDeg * G.BUDDY_IMU_GAZE_PER_DEG) : 0;
+    device.gaze.y = settings.followTilt ? c(yDeg * G.BUDDY_IMU_GAZE_PER_DEG) : 0;
     const out = $("#tilt-out");
     if (out) out.textContent = `${xDeg.toFixed(0)}°, ${yDeg.toFixed(0)}°` + (source ? ` (${source})` : "");
     /* Picked up / set down, with the same hysteresis as hw_imu.c. */
@@ -502,6 +502,23 @@
     await wait(650);
 
     const reply = FW.replies[cmd.action];
+
+    /* answer_battery() in voice_local_brain.c, fed by the battery slider. */
+    if (cmd.action === "battery_level") {
+      const mv = sensors.battMv, pct = batteryPercent(mv);
+      const text = sensors.dock
+        ? `My battery is at ${(mv / 1000).toFixed(2)} volts, about ${pct} percent.`
+        : "I can only check the battery on the sensor dock.";
+      device.anim.setEmotion(!sensors.dock ? "sheepish" : mv < G.BUDDY_BATTERY_LOW_MV ? "exhausted" : pct >= 60 ? "proud" : "neutral");
+      chime("understood");
+      device.caption("buddy", text, CAPTION_LINGER_MS);
+      log(`local_brain: "${text}" (from the simulated battery slider)`);
+      await wait(CAPTION_LINGER_MS);
+      setState(muted ? "muted" : "idle");
+      busy = false;
+      return;
+    }
+
     if (!reply || reply.runtime) {
       device.anim.setEmotion("thinking");
       device.caption("status", "On the device this answer is built at runtime. The simulator does not invent it.", 4200);
@@ -579,6 +596,11 @@
         <div class="lv-section">SENSORS</div>
         <div class="lv-row">Show readout${sw("showReadout", settings.showReadout, "Show readout")}</div>
         <div class="lv-row">Fahrenheit${sw("fahrenheit", settings.fahrenheit, "Fahrenheit")}</div>
+        <div class="lv-section">MOTION AND BATTERY</div>
+        <div class="lv-row">Motion sensor<span class="v">ICM-42607-P (sim)</span></div>
+        <div class="lv-row">Eyes follow tilt${sw("followTilt", settings.followTilt, "Eyes follow tilt")}</div>
+        <div class="lv-row">Battery<span class="v">${sensors.dock ? (sensors.battMv / 1000).toFixed(2) + " V, ~" + batteryPercent(sensors.battMv) + "%" : "Needs the sensor dock"}</span></div>
+        <div class="lv-note">Voltage is measured; the percentage is an estimate. Charging only shows on the dock's LEDs. Tilt follow resets to on after a restart.</div>
         <div class="lv-section">VOICE</div>
         <div class="lv-row">Language<select aria-label="Language"><option>English (Hi E.S.P.)</option><option disabled>Chinese (Hi Lexin) - device only</option></select></div>
         <div class="lv-row">Room noise<select aria-label="Room noise"><option>Automatic</option><option>Quiet room</option><option>Noisy room</option></select></div>
@@ -632,6 +654,7 @@
     audio.setVolume(settings.volume / 100);
     device.brightness = settings.brightness / 100;
     device.anim.idleAntics = settings.idleAntics;
+    if (!settings.followTilt) { device.gaze.x = 0; device.gaze.y = 0; }
     updateChip();
     renderRouter();
   }
