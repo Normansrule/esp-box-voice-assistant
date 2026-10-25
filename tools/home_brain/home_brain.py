@@ -665,10 +665,40 @@ def ask_once(args):
     return 0
 
 
+def inside_esp_idf_python():
+    """
+    True when running on ESP-IDF's own Python environment.
+
+    That environment pins its packages for idf.py, and the home brain's
+    dependencies break it (faster-whisper brings click 8.5; ESP-IDF 5.5 needs
+    click older than 8.2). It happened on Alek's PC, so it is checked for.
+    """
+    if os.environ.get("IDF_PYTHON_ENV_PATH"):
+        return True
+    prefix = sys.prefix.replace("\\", "/").lower()
+    return "/python_env/idf" in prefix or "/.espressif/" in prefix
+
+
+def refuse_esp_idf_python():
+    """Print how to run it properly, and return an exit code, if inside ESP-IDF."""
+    if not inside_esp_idf_python():
+        return None
+    print("This is ESP-IDF's Python (%s)." % sys.prefix)
+    print("Run the home brain from an ordinary terminal instead, so its packages")
+    print("cannot break idf.py. On Windows:")
+    print("    py -3.12 -m pip install -r tools/home_brain/requirements.txt")
+    print("    py -3.12 tools/home_brain/home_brain.py")
+    print('If idf.py already complains about click: python -m pip install "click>=7.0,<8.2"')
+    return 2
+
+
 def main(argv=None):
     # Windows consoles default to a code page that cannot print "°C".
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    refused = refuse_esp_idf_python()
+    if refused is not None:
+        return refused
     parser = argparse.ArgumentParser(description="The Desk Buddy's home AI server.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--bind", default="0.0.0.0",

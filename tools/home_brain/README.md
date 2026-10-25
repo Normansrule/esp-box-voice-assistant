@@ -98,12 +98,20 @@ GPU in well under a second.
 
 1. Install [Ollama](https://ollama.com), then: `ollama pull llama3.2`
 2. Install ffmpeg (Windows: `winget install Gyan.FFmpeg`; Ubuntu: `sudo apt install ffmpeg espeak-ng`).
-3. From the repository root:
+3. From the repository root, in an **ordinary** terminal, not an ESP-IDF one:
 
 ```bash
-python -m pip install -r tools/home_brain/requirements.txt
-python tools/home_brain/home_brain.py
+py -3.12 -m pip install -r tools/home_brain/requirements.txt
+py -3.12 tools/home_brain/home_brain.py
 ```
+
+(On Linux or macOS, `python3` in place of `py -3.12`.)
+
+> **Keep it out of the ESP-IDF Python.** Installing these into an "ESP-IDF
+> CMD/PowerShell" window breaks `idf.py`: faster-whisper brings click 8.5 and
+> ESP-IDF 5.5 requires click older than 8.2. If that has happened, repair it from
+> the ESP-IDF window with `python -m pip install "click>=7.0,<8.2"`. The home
+> brain refuses to start inside the ESP-IDF Python for this reason.
 
 It prints an address like `192.168.1.50:8765`. Windows will ask whether to let
 Python through the firewall: allow it on **private** networks only.

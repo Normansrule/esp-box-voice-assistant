@@ -104,6 +104,9 @@ BANK = [
 
 
 def main(argv=None):
+    refused = home_brain.refuse_esp_idf_python()
+    if refused is not None:
+        return refused
     parser = argparse.ArgumentParser(description="Score the home brain on a bank of questions.")
     parser.add_argument("--ollama", default=home_brain.DEFAULT_OLLAMA)
     parser.add_argument("--model", default=home_brain.DEFAULT_MODEL)
