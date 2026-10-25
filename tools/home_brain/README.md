@@ -1,8 +1,14 @@
 # Home AI: the buddy's own brain, on your computer
 
 Status: **VERIFIED IN TEST** (server wire format, router policy) and **live on a
-Windows PC** for the answering and voice steps. **UNTESTED ON DEVICE**: the box
-talking to this server over Wi-Fi has not been tried on hardware yet.
+Windows PC end to end**: a spoken 16 kHz WAV sent to the LAN address the way the
+firmware sends it was heard, answered and spoken back as MP3 in about 1.6 s
+(hear 0.5 s on CPU, think 0.6 s on GPU, speak 0.5 s). **UNTESTED ON DEVICE**: the
+box itself talking to this server over Wi-Fi has not been tried yet.
+
+Whisper runs on the CPU unless the CUDA 12 cuBLAS/cuDNN libraries are present;
+the server tries the GPU, checks it with one transcription, and falls back. On
+the CPU, base.en still takes about half a second per question.
 
 ## What it is
 

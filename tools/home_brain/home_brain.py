@@ -88,14 +88,40 @@ class WhisperEars:
         for dev, compute in attempts:
             try:
                 self.model = WhisperModel(model_name, device=dev, compute_type=compute)
+                # Loading on CUDA succeeds even when cuBLAS is missing; the first
+                # transcription is what fails. So try one now, on silence.
+                import numpy
+                list(self.model.transcribe(numpy.zeros(8000, dtype=numpy.float32))[0])
                 self.description = "Whisper %s on %s" % (model_name, dev)
                 return
             except Exception as error:  # A missing CUDA library is the usual one.
                 last_error = error
         raise RuntimeError("could not load Whisper: %s" % last_error)
 
+    @staticmethod
+    def wav_to_samples(audio_bytes):
+        """
+        The box's 16 kHz 16-bit mono WAV as the float array Whisper wants.
+
+        Decoded here rather than by faster-whisper, which hands files to PyAV:
+        faster-whisper 1.2.1 with PyAV 19 fails on every file ("unexpected
+        keyword argument 'metadata_errors'"). The box only ever sends this one
+        format, so the standard library is enough. None for anything else.
+        """
+        import numpy
+        try:
+            with wave.open(io.BytesIO(audio_bytes), "rb") as wav_file:
+                if (wav_file.getframerate() != 16000 or wav_file.getsampwidth() != 2
+                        or wav_file.getnchannels() != 1):
+                    return None
+                frames = wav_file.readframes(wav_file.getnframes())
+        except (wave.Error, EOFError):
+            return None
+        return numpy.frombuffer(frames, dtype="<i2").astype(numpy.float32) / 32768.0
+
     def transcribe(self, audio_bytes, language):
-        segments, _ = self.model.transcribe(io.BytesIO(audio_bytes),
+        samples = self.wav_to_samples(audio_bytes)
+        segments, _ = self.model.transcribe(samples if samples is not None else io.BytesIO(audio_bytes),
                                             language=language or None,
                                             beam_size=1, vad_filter=True)
         return " ".join(segment.text.strip() for segment in segments).strip()
@@ -242,7 +268,8 @@ class OllamaMind:
         if brain_tools.answer_agrees_with_tool(answer, result):
             return answer
         mood = answer.split("]", 1)[0] + "]" if answer.startswith("[") else "[neutral]"
-        self.last_tool_calls.append("answer disagreed with %s; using the tool's result" % name)
+        self.last_tool_calls.append("answer %r disagreed with %s; using the tool's result"
+                                    % (answer, name))
         return "%s %s" % (mood, brain_tools.tool_answer_sentence(name, result))
 
 

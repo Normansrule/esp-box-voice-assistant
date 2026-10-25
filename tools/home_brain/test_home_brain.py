@@ -147,5 +147,36 @@ class HomeBrainWireFormat(unittest.TestCase):
             self.assertEqual(reply.status, 200)
 
 
+class BoxAudio(unittest.TestCase):
+    """The box's WAV is decoded without PyAV, which broke on the real PC."""
+
+    def setUp(self):
+        try:
+            import numpy  # noqa: F401
+        except ImportError:
+            self.skipTest("numpy is installed with faster-whisper; not needed elsewhere")
+
+    @staticmethod
+    def wav(rate=16000, width=2, channels=1, samples=(0, 16384, -32768)):
+        import io
+        import struct
+        import wave
+        buffer = io.BytesIO()
+        with wave.open(buffer, "wb") as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(width)
+            wav_file.setframerate(rate)
+            wav_file.writeframes(struct.pack("<%dh" % len(samples), *samples))
+        return buffer.getvalue()
+
+    def test_the_box_format_becomes_whisper_samples(self):
+        samples = home_brain.WhisperEars.wav_to_samples(self.wav())
+        self.assertEqual(list(samples), [0.0, 0.5, -1.0])
+
+    def test_anything_else_is_left_to_whisper(self):
+        self.assertIsNone(home_brain.WhisperEars.wav_to_samples(self.wav(rate=44100)))
+        self.assertIsNone(home_brain.WhisperEars.wav_to_samples(b"not a wav"))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

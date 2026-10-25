@@ -48,9 +48,9 @@ class DatesAndTimes(unittest.TestCase):
 
     def test_date_info(self):
         self.assertEqual(tools.date_info("2026-12-25", self.TODAY),
-                         "2026-12-25 is a Friday, in 62 days")
+                         "Friday 25 December 2026, in 62 days")
         self.assertEqual(tools.date_info("2026-10-23", self.TODAY),
-                         "2026-10-23 is a Friday, 1 day ago")
+                         "Friday 23 October 2026, 1 day ago")
         self.assertIn("today", tools.date_info("2026-10-24", self.TODAY))
 
     def test_add_time(self):
@@ -87,7 +87,7 @@ class AnswersForTheBox(unittest.TestCase):
         self.assertTrue(tools.answer_agrees_with_tool("That's 31 eggs left!", "31"))
         self.assertFalse(tools.answer_agrees_with_tool("about 2.53 cups", "750 ml is 3.17 cups"))
         self.assertTrue(tools.answer_agrees_with_tool("It is a Sunday!",
-                                                      "2027-03-14 is a Sunday, in 141 days"))
+                                                      "Sunday 14 March 2027, in 141 days"))
         self.assertTrue(tools.answer_agrees_with_tool("It arrives at 4:15 PM.",
                                                       "2:40 pm plus 95 minutes is 4:15 PM"))
 

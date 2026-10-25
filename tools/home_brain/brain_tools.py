@@ -97,7 +97,8 @@ def date_info(date, today=None):
         when = "in %d day%s" % (delta, "" if delta == 1 else "s")
     else:
         when = "%d day%s ago" % (-delta, "" if delta == -1 else "s")
-    return "%s is a %s, %s" % (target.isoformat(), target.strftime("%A"), when)
+    # Worded to be read aloud: "Friday 25 December 2026, in 62 days".
+    return "%s %d %s, %s" % (target.strftime("%A"), target.day, target.strftime("%B %Y"), when)
 
 
 def add_time(start, minutes):
@@ -271,8 +272,8 @@ def answer_agrees_with_tool(answer, tool_result):
     # except for dates, where the day count is what matters.
     key = re.findall(r"-?\d[\d,]*\.?\d*", tool_result.replace(",", ""))
     key = [k.rstrip(".") for k in key]
-    if " day" in tool_result and "is a " in tool_result:
-        weekday = tool_result.split("is a ", 1)[1].split(",", 1)[0]
+    weekday = tool_result.split(" ", 1)[0]
+    if weekday in ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"):
         return weekday.lower() in (answer or "").lower() or key[-1] in _numbers(answer)
     if ":" in tool_result and ("AM" in tool_result or "PM" in tool_result):
         clock = re.search(r"\d{1,2}:\d{2}", tool_result.split(" is ", 1)[-1]).group(0)
