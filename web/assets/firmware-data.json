@@ -46,6 +46,14 @@
   "FACE_IDLE_ANTIC_INTERVAL_MAX_MS": 17000,
   "FACE_LIP_SYNC_REFRESH_MS": 55,
   "BUDDY_LISTEN_WINDOW_MS": 6000,
+  "FACE_EYE_WIDTH": 51,
+  "FACE_SLEEPY_AFTER_MINUTES": 5,
+  "FACE_ASLEEP_AFTER_MINUTES": 15,
+  "FACE_MOOD_FADE_AFTER_MS": 90000,
+  "FACE_TICKLE_GAP_MS": 900,
+  "FACE_TICKLE_GIGGLE_TAPS": 3,
+  "FACE_TICKLE_ENOUGH_TAPS": 7,
+  "FACE_MARK_BOB_MS": 900,
   "BUDDY_DEFAULT_REQUESTS_PER_HOUR": 30,
   "BUDDY_SENSOR_REFRESH_MS": 3000,
   "BUDDY_IMU_RATE_HZ": 50,
@@ -1279,6 +1287,33 @@
    }
   },
   {
+   "id": "muted",
+   "name": "muted",
+   "pose": {
+    "eye_width": 51,
+    "eye_height": 56,
+    "eye_corner_radius": 22,
+    "eye_lower_lid": 0,
+    "eye_upper_lid": 8,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": -3,
+    "brow_inner_tilt": -1,
+    "brow_spread": 0,
+    "brow_asymmetry": 0,
+    "brows_visible": true,
+    "mouth_width": 61,
+    "mouth_curve": 0,
+    "mouth_open_height": 0,
+    "mouth_offset_y": 1,
+    "blush_opacity": 0,
+    "look_x": 0,
+    "look_y": 14,
+    "face_offset_x": 0,
+    "face_offset_y": 1
+   }
+  },
+  {
    "id": "listening",
    "name": "listening",
    "pose": {
@@ -1825,8 +1860,468 @@
      "hold_ms": 0
     }
    ]
+  },
+  {
+   "name": "daydream",
+   "steps": [
+    {
+     "emotion": "dreamy",
+     "look_x": -45,
+     "look_y": -60,
+     "face_offset_x": 0,
+     "face_offset_y": -2,
+     "transition_ms": 420,
+     "hold_ms": 1100
+    },
+    {
+     "emotion": "hopeful",
+     "look_x": -10,
+     "look_y": -30,
+     "face_offset_x": 0,
+     "face_offset_y": -2,
+     "transition_ms": 300,
+     "hold_ms": 500
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 320,
+     "hold_ms": 0
+    }
+   ]
+  },
+  {
+   "name": "aha",
+   "steps": [
+    {
+     "emotion": "thinking",
+     "look_x": 55,
+     "look_y": -48,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 300,
+     "hold_ms": 800
+    },
+    {
+     "emotion": "sceptical",
+     "look_x": 20,
+     "look_y": -10,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 220,
+     "hold_ms": 600
+    },
+    {
+     "emotion": "surprised",
+     "look_x": 0,
+     "look_y": -10,
+     "face_offset_x": 0,
+     "face_offset_y": -4,
+     "transition_ms": 140,
+     "hold_ms": 420
+    },
+    {
+     "emotion": "happy",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 240,
+     "hold_ms": 300
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 0
+    }
+   ]
+  },
+  {
+   "name": "giggle fit",
+   "steps": [
+    {
+     "emotion": "giggly",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": -5,
+     "transition_ms": 140,
+     "hold_ms": 110
+    },
+    {
+     "emotion": "giggly",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 3,
+     "transition_ms": 120,
+     "hold_ms": 110
+    },
+    {
+     "emotion": "giggly",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": -5,
+     "transition_ms": 120,
+     "hold_ms": 110
+    },
+    {
+     "emotion": "giggly",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 3,
+     "transition_ms": 120,
+     "hold_ms": 110
+    },
+    {
+     "emotion": "happy",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 220,
+     "hold_ms": 400
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 0
+    }
+   ]
   }
  ],
+ "marks": {
+  "by_emotion": {
+   "asleep": "sleep",
+   "nervous": "sweat",
+   "panic": "sweat",
+   "sheepish": "sweat",
+   "exhausted": "sweat",
+   "sad": "tear",
+   "pleading": "tear",
+   "confused": "question",
+   "sceptical": "question",
+   "surprised": "exclaim",
+   "shocked": "exclaim",
+   "alarmed": "exclaim",
+   "love": "heart",
+   "starry": "heart",
+   "muted": "zip"
+  },
+  "specs": {
+   "none": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     1,
+     1
+    ],
+    "stroke_width": 5,
+    "strokes": [],
+    "dot": null,
+    "bob_px": 0
+   },
+   "sleep": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     46,
+     52
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       4,
+       26
+      ],
+      [
+       26,
+       26
+      ],
+      [
+       4,
+       48
+      ],
+      [
+       26,
+       48
+      ]
+     ],
+     [
+      [
+       30,
+       4
+      ],
+      [
+       42,
+       4
+      ],
+      [
+       30,
+       16
+      ],
+      [
+       42,
+       16
+      ]
+     ]
+    ],
+    "dot": null,
+    "bob_px": 8
+   },
+   "sweat": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [],
+    "dot": [
+     4,
+     6,
+     12,
+     19
+    ],
+    "bob_px": 3
+   },
+   "tear": {
+    "anchor": "tear",
+    "origin": [
+     113,
+     149
+    ],
+    "box": [
+     16,
+     24
+    ],
+    "stroke_width": 5,
+    "strokes": [],
+    "dot": [
+     2,
+     2,
+     11,
+     17
+    ],
+    "bob_px": -3
+   },
+   "question": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       9,
+       12
+      ],
+      [
+       13,
+       6
+      ],
+      [
+       20,
+       3
+      ],
+      [
+       28,
+       6
+      ],
+      [
+       31,
+       13
+      ],
+      [
+       27,
+       20
+      ],
+      [
+       20,
+       24
+      ],
+      [
+       20,
+       29
+      ]
+     ]
+    ],
+    "dot": [
+     17,
+     35,
+     7,
+     7
+    ],
+    "bob_px": 3
+   },
+   "exclaim": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       20,
+       4
+      ],
+      [
+       20,
+       28
+      ]
+     ]
+    ],
+    "dot": [
+     17,
+     35,
+     7,
+     7
+    ],
+    "bob_px": 3
+   },
+   "heart": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       20,
+       38
+      ],
+      [
+       7,
+       26
+      ],
+      [
+       4,
+       17
+      ],
+      [
+       7,
+       9
+      ],
+      [
+       13,
+       6
+      ],
+      [
+       20,
+       12
+      ],
+      [
+       27,
+       6
+      ],
+      [
+       33,
+       9
+      ],
+      [
+       36,
+       17
+      ],
+      [
+       33,
+       26
+      ],
+      [
+       20,
+       38
+      ]
+     ]
+    ],
+    "dot": null,
+    "bob_px": 3
+   },
+   "zip": {
+    "anchor": "mouth",
+    "origin": null,
+    "box": [
+     62,
+     24
+    ],
+    "stroke_width": 4,
+    "strokes": [
+     [
+      [
+       4,
+       12
+      ],
+      [
+       13,
+       2
+      ],
+      [
+       22,
+       22
+      ],
+      [
+       31,
+       2
+      ],
+      [
+       40,
+       22
+      ],
+      [
+       49,
+       2
+      ],
+      [
+       58,
+       12
+      ]
+     ]
+    ],
+    "dot": null,
+    "bob_px": 0
+   }
+  }
+ },
  "commands": [
   {
    "action": "greeting",

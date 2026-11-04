@@ -42,6 +42,7 @@ idf_component_register(
         # Drawing and animating the face
         "face/face_pose.c"
         "face/face_emotions.c"
+        "face/face_mood.c"
         "face/face_view.c"
         "face/face_theme.c"
         "face/face_animator.c"

@@ -665,6 +665,24 @@ static const face_pose_t s_emotion_poses[FACE_EMOTION_COUNT] = {
         .face_offset_x = 0,           .face_offset_y = S(4),
     },
 
+    /*
+     * The mute switch is on. Calm and a little withdrawn rather than sad: the
+     * eyes soften and drop, the mouth narrows to a flat line and FACE_MARK_ZIP
+     * stitches it shut. It has to read as "not listening" from across a room,
+     * because that is a privacy promise, not a mood.
+     */
+    [FACE_EMOTION_MUTED] = {
+        .eye_width = S(EYE_W),        .eye_height = S(EYE_H-8),     .eye_corner_radius = S(EYE_R),
+        .eye_lower_lid = 0,           .eye_upper_lid = S(10),
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(-4),       .brow_inner_tilt = S(-2),     .brow_spread = 0,
+        .brow_asymmetry = 0,          .brows_visible = true,
+        .mouth_width = S(MOUTH_W-24), .mouth_curve = 0,             .mouth_open_height = 0,
+        .mouth_offset_y = S(2),
+        .blush_opacity = 0,           .look_x = 0,                  .look_y = 14,
+        .face_offset_x = 0,           .face_offset_y = S(2),
+    },
+
     [FACE_EMOTION_LISTENING] = {
         .eye_width = S(EYE_W+10),     .eye_height = S(EYE_H+8),     .eye_corner_radius = S(EYE_R+8),
         .eye_lower_lid = 0,           .eye_upper_lid = 0,
@@ -749,9 +767,37 @@ static const char *const s_emotion_names[FACE_EMOTION_COUNT] = {
     [FACE_EMOTION_FOCUSED]    = "focused",
     [FACE_EMOTION_PLAYFUL]    = "playful",
     [FACE_EMOTION_EXHAUSTED]  = "exhausted",
+    [FACE_EMOTION_MUTED]      = "muted",
     [FACE_EMOTION_LISTENING] = "listening",
     [FACE_EMOTION_THINKING]  = "thinking",
     [FACE_EMOTION_SPEAKING]  = "speaking",
+};
+
+/*
+ * Which symbol goes with which mood. Anything not listed draws no mark.
+ *
+ * Kept deliberately short. A mark on every face turns into noise; these are
+ * the expressions where a cartoonist would reach for one, and each is worn in
+ * answer to something real - a timer going off (shocked), a phrase the buddy
+ * could not match (confused), a low battery reading (exhausted), the mute
+ * switch (muted), an hour of nobody (asleep).
+ */
+static const uint8_t s_emotion_marks[FACE_EMOTION_COUNT] = {
+    [FACE_EMOTION_ASLEEP]     = FACE_MARK_SLEEP,
+    [FACE_EMOTION_NERVOUS]    = FACE_MARK_SWEAT,
+    [FACE_EMOTION_PANIC]      = FACE_MARK_SWEAT,
+    [FACE_EMOTION_SHEEPISH]   = FACE_MARK_SWEAT,
+    [FACE_EMOTION_EXHAUSTED]  = FACE_MARK_SWEAT,
+    [FACE_EMOTION_SAD]        = FACE_MARK_TEAR,
+    [FACE_EMOTION_PLEADING]   = FACE_MARK_TEAR,
+    [FACE_EMOTION_CONFUSED]   = FACE_MARK_QUESTION,
+    [FACE_EMOTION_SCEPTICAL]  = FACE_MARK_QUESTION,
+    [FACE_EMOTION_SURPRISED]  = FACE_MARK_EXCLAIM,
+    [FACE_EMOTION_SHOCKED]    = FACE_MARK_EXCLAIM,
+    [FACE_EMOTION_ALARMED]    = FACE_MARK_EXCLAIM,
+    [FACE_EMOTION_LOVE]       = FACE_MARK_HEART,
+    [FACE_EMOTION_STARRY]     = FACE_MARK_HEART,
+    [FACE_EMOTION_MUTED]      = FACE_MARK_ZIP,
 };
 
 const face_pose_t *face_emotion_get_pose(face_emotion_t emotion)
@@ -760,6 +806,19 @@ const face_pose_t *face_emotion_get_pose(face_emotion_t emotion)
         emotion = FACE_EMOTION_NEUTRAL;
     }
     return &s_emotion_poses[emotion];
+}
+
+face_mark_t face_emotion_get_mark(face_emotion_t emotion)
+{
+    if (emotion < 0 || emotion >= FACE_EMOTION_COUNT) {
+        return FACE_MARK_NONE;
+    }
+    return (face_mark_t)s_emotion_marks[emotion];
+}
+
+bool face_emotion_is_status_only(face_emotion_t emotion)
+{
+    return emotion == FACE_EMOTION_MUTED;
 }
 
 const char *face_emotion_get_name(face_emotion_t emotion)
@@ -778,7 +837,7 @@ bool face_emotion_from_name(const char *name, size_t name_len, face_emotion_t *o
 
     for (int i = 0; i < FACE_EMOTION_COUNT; i++) {
         const char *candidate = s_emotion_names[i];
-        if (candidate == NULL) {
+        if (candidate == NULL || face_emotion_is_status_only((face_emotion_t)i)) {
             continue;
         }
         if (strlen(candidate) == name_len && strncasecmp(candidate, name, name_len) == 0) {
@@ -886,6 +945,32 @@ static const face_antic_step_t s_antic_wobble[] = {
     { FACE_EMOTION_NEUTRAL,    0,   0,  0, 0, 240,   0 },
 };
 
+/* Drifts off into a daydream, then comes back hopeful. */
+static const face_antic_step_t s_antic_daydream[] = {
+    { FACE_EMOTION_DREAMY,   -45, -60,  0, -2, 420, 1100 },
+    { FACE_EMOTION_HOPEFUL,  -10, -30,  0, -2, 300,  500 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 320,    0 },
+};
+
+/* Puzzles over something ("?"), then gets it ("!"). */
+static const face_antic_step_t s_antic_aha[] = {
+    { FACE_EMOTION_THINKING,  55, -48,  0,  0, 300,  800 },
+    { FACE_EMOTION_SCEPTICAL, 20, -10,  0,  0, 220,  600 },
+    { FACE_EMOTION_SURPRISED,  0, -10,  0, -4, 140,  420 },
+    { FACE_EMOTION_HAPPY,      0,   0,  0,  0, 240,  300 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
+};
+
+/* A fit of the giggles: also what being tapped over and over sets off. */
+static const face_antic_step_t s_antic_giggle_fit[] = {
+    { FACE_EMOTION_GIGGLY,     0,   0,  0, -5, 140,  110 },
+    { FACE_EMOTION_GIGGLY,     0,   0,  0,  3, 120,  110 },
+    { FACE_EMOTION_GIGGLY,     0,   0,  0, -5, 120,  110 },
+    { FACE_EMOTION_GIGGLY,     0,   0,  0,  3, 120,  110 },
+    { FACE_EMOTION_HAPPY,      0,   0,  0,  0, 220,  400 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
+};
+
 /* Convenience macro so the registry below stays one readable line per antic. */
 #define ANTIC_ENTRY(display_name, step_array) \
     { .name = (display_name), .steps = (step_array), \
@@ -908,6 +993,9 @@ static const face_antic_t s_antics[] = {
     ANTIC_ENTRY("love flash",    s_antic_love_flash),
     ANTIC_ENTRY("peek down",     s_antic_peek_down),
     ANTIC_ENTRY("wobble",        s_antic_wobble),
+    ANTIC_ENTRY("daydream",      s_antic_daydream),
+    ANTIC_ENTRY("aha",           s_antic_aha),
+    ANTIC_ENTRY("giggle fit",    s_antic_giggle_fit),
 };
 
 uint8_t face_antic_get_count(void)
@@ -921,4 +1009,17 @@ const face_antic_t *face_antic_get(uint8_t index)
         return NULL;
     }
     return &s_antics[index];
+}
+
+int face_antic_find(const char *name)
+{
+    if (name == NULL) {
+        return -1;
+    }
+    for (uint8_t i = 0; i < face_antic_get_count(); i++) {
+        if (strcmp(s_antics[i].name, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }

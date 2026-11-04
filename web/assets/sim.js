@@ -100,7 +100,7 @@
         const c = (v) => Math.max(-100, Math.min(100, v));
         pose = Object.assign({}, pose, { look_x: c(pose.look_x + this.gaze.x), look_y: c(pose.look_y + this.gaze.y) });
       }
-      F.drawFace(ctx, pose, this.anim.shift);
+      F.drawFace(ctx, pose, this.anim.shift, undefined, this.anim.mark, this.anim.markBob(now, reduceMotion));
       if (this.opts.chrome) {
         this.drawGear(ctx);
         if (this.chip) this.drawChip(ctx);
@@ -564,8 +564,22 @@
     const y = (ev.clientY - r.top) / r.height * 240;
     if (ev.clientX !== undefined && x < EDGE + GEAR + 4 && y > 240 - EDGE - GEAR - 4) { openSettings(); return; }
     if (!settings.touchAntics) return;
-    log("touch: poke");
-    device.anim.playAntic(Math.floor(Math.random() * FW.antics.length));
+    /* ui_screen_face.c screen_pressed_cb: a poke, or a tickle if taps come fast. */
+    device.anim.noticeActivity();
+    const reaction = device.anim.registerTap(performance.now());
+    if (reaction === "giggle") {
+      log("touch: tickle - giggle fit");
+      device.anim.playAntic(FW.antics.findIndex((a) => a.name === "giggle fit"));
+    } else if (reaction === "enough") {
+      log("touch: tickled too much");
+      if (!device.anim.muted) {
+        device.anim.flashEmotion("scrunch", 1200);
+        device.caption("buddy", "Okay, okay! I give up!", 1800);
+      }
+    } else {
+      log("touch: poke");
+      device.anim.playAntic(Math.floor(Math.random() * FW.antics.length));
+    }
   }
 
   /* ---------------------------------------------------------------------- */
@@ -738,12 +752,12 @@
     });
   }
 
-  function renderStatic(canvas, pose, scale) {
+  function renderStatic(canvas, pose, mark) {
     const c = canvas.getContext("2d");
     c.setTransform(canvas.width / 320, 0, 0, canvas.height / 240, 0, 0);
     c.fillStyle = T.background;
     c.fillRect(0, 0, 320, 240);
-    F.drawFace(c, pose, 0);
+    F.drawFace(c, pose, 0, undefined, mark, 0);
   }
 
   function buildPanels() {
@@ -772,12 +786,14 @@
       tile.className = "face-tile";
       const cv = document.createElement("canvas");
       cv.width = 160; cv.height = 120;
-      renderStatic(cv, e.pose);
+      renderStatic(cv, e.pose, F.markFor(e.name));
       tile.append(cv, document.createTextNode(e.name));
       tile.addEventListener("click", () => {
         $$(".face-tile.on").forEach((t) => t.classList.remove("on"));
         tile.classList.add("on");
-        device.anim.setEmotion(e.name);
+        /* "muted" is status-only on the device: preview it, never rest in it. */
+        if (e.name === "muted") device.anim.flashEmotion(e.name, 1500);
+        else device.anim.setEmotion(e.name);
       });
       tile.addEventListener("mouseenter", () => device.anim.flashEmotion(e.name, 600));
       grid.appendChild(tile);
@@ -823,6 +839,10 @@
       e.currentTarget.setAttribute("aria-pressed", muted);
       log(`buttons: mute switch ${muted ? "MUTED" : "live"}`);
       if (muted) { clearTimeout(listenTimer); if (state === "listening") { device.hideCaption(); device.anim.setEmotion("neutral"); } }
+      /* ui_screen_face.c mute_poll_cb: the face shows the switch. */
+      device.anim.setMuted(muted);
+      device.caption("status", muted ? "Microphone off. I can't hear you." : "Microphone on.", 2600);
+      if (!muted) device.anim.flashEmotion("happy", 900);
       setState(muted ? "muted" : "idle");
     });
     const scr = $("#screen");
@@ -900,7 +920,7 @@
       cv.width = 320; cv.height = 240;
       const pose = Object.assign({}, F.POSES[s.emotion]);
       if (s.open) pose.mouth_open_height = s.open;
-      renderStatic(cv, pose);
+      renderStatic(cv, pose, F.markFor(s.emotion));
       card.innerHTML = `<h3></h3><p></p><span class="src"></span>`;
       card.prepend(cv);
       $("h3", card).textContent = s.title;
