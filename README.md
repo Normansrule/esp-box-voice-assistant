@@ -193,6 +193,8 @@ No affiliate tags are set, so these links earn nothing. Tags live in one place, 
 
 ## Build and flash
 
+**New to this?** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) is a step-by-step guide for Windows, macOS and Linux: downloads, finding the port, flashing, recovery, changing the code safely, and fixes for common errors.
+
 Requires **ESP-IDF v5.5.x**. Not v6: it removed the legacy I2C driver the sensor-dock support uses. Keep the clone path free of spaces (ESP-SR passes library paths to the linker unquoted).
 
 <details open>
@@ -257,6 +259,8 @@ Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
 
 | Guide | What is in it |
 | --- | --- |
+| [Getting started](docs/GETTING_STARTED.md) | Step-by-step setup, flashing and recovery for beginners on Windows, macOS and Linux |
+| [GitHub security](docs/GITHUB_SECURITY.md) | Repository settings checklist and the secret checks |
 | [Firmware guide](docs/FIRMWARE_GUIDE.md) | Installing ESP-IDF, building, the phrases it knows, how the code is organised, making it yours, testing |
 | [Hardware tests](docs/HARDWARE_TESTS.md) | A guided two-minute test for the motion sensor and battery, and what the logs decide |
 | [Build results](docs/BUILD_RESULTS.md) | Compiler, SDK and size numbers from real builds |
