@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased · More offline phrases
+
+- 20 new offline phrases (127 to 147 English), kept under the ~150 internal-RAM ceiling agreed with the boot-memory work: new wordings for time, date, jokes, volume, goodbyes, thanks, compliments and cheering up, plus timers for three and fifteen minutes.
+- New offline answers: riddles, "say that again" (repeats the last reply word for word, kept in PSRAM), "never mind", an honest "what is the weather like" (no forecast, points at the room sensor), favourite colour, "i am so bored", and screen brightness up/down by voice.
+- More variety in existing replies; the "there is no battery in me" fact now allows for the dock battery.
+- 37 new voice clips (about 290 KB); the storage image was checked with spiffsgen and still fits with about 95 KB spare.
+- **Untested on device.**
+
 ## Unreleased · Home AI brain mode
 
 - New **Home AI** brain mode: unmatched questions go to `tools/home_brain/home_brain.py` on a computer on the LAN (Whisper + llama3.2 via Ollama + local TTS), with no OpenAI key, account or bill. Falls back to offline answers when it is not set up; a 1.5 s health probe catches a switched-off PC. **Untested on device.**

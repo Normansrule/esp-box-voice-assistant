@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "esp_err.h"
+#include "driver/i2s_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -124,6 +125,18 @@ uint8_t hw_speaker_get_output_level(void);
  * engine needs the codec back at 16 kHz stereo afterwards, and this does that.
  */
 void hw_speaker_restore_capture_format(void);
+
+/**
+ * @brief Set the codec's sample format, skipping the work if it is already set.
+ *
+ * Every codec format change in the firmware goes through here so the skip is
+ * reliable. Reconfiguring closes and reopens the I2S channels, so do not call
+ * it while the player is writing.
+ *
+ * @param force  Reconfigure even if the cached format matches.
+ */
+esp_err_t hw_speaker_set_codec_format(uint32_t rate, uint32_t bits_per_sample,
+                                      i2s_slot_mode_t channels, bool force);
 
 #ifdef __cplusplus
 }

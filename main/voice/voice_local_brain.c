@@ -19,6 +19,7 @@
 #include "buddy_settings.h"
 #include "buddy_timer.h"
 #include "hw_battery.h"
+#include "hw_display.h"
 #include "hw_sensors.h"
 #include "hw_speaker.h"
 #include "net_wifi.h"
@@ -32,6 +33,10 @@ static const char *TAG = "local_brain";
 
 /** Volume moves in steps this big when the user asks for louder or quieter. */
 #define VOLUME_STEP_PERCENT     10
+
+/** Brightness moves in bigger steps: a 10 percent backlight change is hard to see. */
+#define BRIGHTNESS_STEP_PERCENT 20
+#define BRIGHTNESS_MIN_PERCENT  10
 
 /* ------------------------------------------------------------------------ */
 /* Canned lines                                                              */
@@ -47,6 +52,8 @@ static const char *const s_greetings[] = {
     "Hello there. I was hoping you would say something.",
     "Hi! What are we up to today?",
     "Oh hey, you are back.",
+    "Hello! I was just practising my blinking.",
+    "Hi. You have my full attention, which is all of it.",
 };
 
 static const char *const s_how_are_you[] = {
@@ -54,6 +61,7 @@ static const char *const s_how_are_you[] = {
     "Excellent. My eyes work and everything.",
     "Pretty good for a small box on a desk.",
     "Happy. Slightly bored. Mostly happy.",
+    "Better now that someone is talking to me.",
 };
 
 static const char *const s_jokes[] = {
@@ -83,6 +91,7 @@ static const char *const s_goodbyes[] = {
     "Night night. Poke me if you need anything.",
     "Alright, resting my eyes. Say the wake word whenever.",
     "See you soon.",
+    "Good night. I will keep an ear out.",
 };
 
 /*
@@ -121,18 +130,23 @@ static const char *const s_thanks_answers[] = {
     "Any time. That is the whole job.",
     "You are very welcome.",
     "Happy to help. It beats sitting here blinking.",
+    "No problem at all.",
+    "My pleasure. Genuinely. I do not get out much.",
 };
 
 static const char *const s_compliment_answers[] = {
     "Oh. Well now I am going to be insufferable.",
     "That is going straight into my permanent memory. Which is small, so it counts.",
     "You are alright yourself.",
+    "Stop it, my cheeks would go red if I had any.",
+    "I like you too. You are my favourite person on this desk.",
 };
 
 static const char *const s_good_mornings[] = {
     "Morning! I have been up for a while.",
     "Good morning. The desk missed you.",
     "Morning. I checked, and the temperature is fine.",
+    "Good morning! Ready when you are.",
 };
 
 static const char *const s_high_fives[] = {
@@ -156,7 +170,7 @@ static const char *const s_facts[] = {
     "A quartz clock crystal is cut so precisely that it vibrates the same number of times every second, forever.",
     "The red I am drawn in is Espressif's. I did not choose it, but I have grown fond of it.",
     "Flash memory forgets slowly. Left unpowered for twenty years, I might lose track of who I am.",
-    "There is no battery in me. Every time you unplug me, I forget what time it is and have to ask the internet.",
+    "Without a battery in my dock, unplugging me wipes my clock.",
 };
 
 /*
@@ -223,6 +237,7 @@ static const char *const s_encouragement[] = {
     "Nobody else could tell how much of that was guesswork. It counts the same.",
     "I have a face and no hands, so trust me when I say you are ahead.",
     "Whatever it is, you have solved worse. I was there for some of it.",
+    "I am only a small box, but I am on your side.",
 };
 
 static const char *const s_stories[] = {
@@ -234,6 +249,53 @@ static const char *const s_stories[] = {
 
     "There was a clock that had never seen the sun. It asked the network what time it was, "
     "every morning, and believed the answer. It was never once wrong. The end.",
+};
+
+/*
+ * The v3.8 additions: answers to the things people most often say to a
+ * talking box that it used to shrug at. Fixed sentences, so every one gets a
+ * clip from scripts/make_voice_clips.py and is spoken offline.
+ */
+static const char *const s_riddles[] = {
+    "What has keys but cannot open a single lock? A keyboard.",
+    "What gets wetter the more it dries? A towel.",
+    "What has a face and two hands but no arms? A clock.",
+    "What can you catch but never throw? A cold.",
+    "What has to be broken before you can use it? An egg.",
+    "The more of them you take, the more you leave behind. What are they? Footsteps.",
+    "What goes up but never comes down? Your age.",
+    "What has one eye but cannot see? A needle.",
+};
+
+static const char *const s_never_mind[] = {
+    "Okay. Forgotten already.",
+    "No problem. I will be here.",
+    "Fair enough.",
+};
+
+/*
+ * Honest about what it cannot know. The box has a thermometer and a humidity
+ * sensor for THIS room and no forecast at all, so it says so and points at the
+ * question it can actually answer, rather than passing off room readings as
+ * weather.
+ */
+static const char *const s_weather[] = {
+    "I have no window and no forecast. Ask how warm it is in here instead.",
+};
+
+static const char *const s_favourite_colours[] = {
+    "Red. Espressif red, specifically. I am biased, I am made of it.",
+    "Blue. It is the colour of a Wi-Fi light that is working.",
+};
+
+static const char *const s_bored_answers[] = {
+    "Ask me for a riddle. Or a story. Or poke my screen and see what I do.",
+    "Want to play rock paper scissors? Just say it.",
+    "Bored is just your brain asking for something new. Ask me for a fact.",
+};
+
+static const char *const s_nothing_to_repeat[] = {
+    "I have not said anything yet.",
 };
 
 /**
@@ -599,6 +661,11 @@ static void answer_battery(voice_reply_t *reply)
         reply_set_text(reply, "I can only check the battery on the sensor dock.");
         return;
     }
+    if (!battery.cell_detected) {
+        reply->emotion = FACE_EMOTION_SHEEPISH;
+        reply_set_text(reply, "I can't find a battery in the dock. Check a cell is fitted and the switch is on.");
+        return;
+    }
 
     reply->emotion = battery.low ? FACE_EMOTION_EXHAUSTED
                    : (battery.percent_est >= 60) ? FACE_EMOTION_PROUD : FACE_EMOTION_NEUTRAL;
@@ -661,6 +728,75 @@ static void handle_volume(voice_reply_t *reply, int direction)
                                                           : VOICE_FRAGMENT_VOLUME_DOWN_TO);
     voice_speech_plan_add_number(&reply->speech, volume);
     voice_speech_plan_add(&reply->speech, VOICE_FRAGMENT_PERCENT);
+}
+
+static void handle_brightness(voice_reply_t *reply, int direction)
+{
+    buddy_settings_t *settings = buddy_settings_get();
+
+    int brightness = (int)settings->screen_brightness + (direction * BRIGHTNESS_STEP_PERCENT);
+    if (brightness > 100) {
+        brightness = 100;
+    }
+    if (brightness < BRIGHTNESS_MIN_PERCENT) {
+        brightness = BRIGHTNESS_MIN_PERCENT;   /* Never dark enough to look broken. */
+    }
+
+    settings->screen_brightness = (uint8_t)brightness;
+    hw_display_set_brightness(settings->screen_brightness);
+    buddy_settings_save();
+
+    reply->emotion = (direction > 0) ? FACE_EMOTION_AMAZED : FACE_EMOTION_SLEEPY;
+    reply_set_text(reply, "Brightness %s to %d percent.",
+                   (direction > 0) ? "up" : "down", brightness);
+
+    voice_speech_plan_add(&reply->speech, (direction > 0) ? VOICE_FRAGMENT_BRIGHTNESS_UP_TO
+                                                          : VOICE_FRAGMENT_BRIGHTNESS_DOWN_TO);
+    voice_speech_plan_add_number(&reply->speech, brightness);
+    voice_speech_plan_add(&reply->speech, VOICE_FRAGMENT_PERCENT);
+}
+
+/* ------------------------------------------------------------------------ */
+/* "Say that again"                                                          */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * The last offline answer, kept so it can be repeated word for word — a fresh
+ * PICK() would say a DIFFERENT joke, which is the opposite of what was asked.
+ *
+ * It lives in PSRAM, allocated on first use. A voice_reply_t is over half a
+ * kilobyte, and internal RAM after the speech models is the scarcest thing on
+ * this board; nothing here is touched by DMA, so PSRAM costs nothing.
+ */
+static voice_reply_t *s_last_reply;
+static bool           s_have_last_reply;
+
+static void remember_reply(const voice_reply_t *reply)
+{
+    if (s_last_reply == NULL) {
+        s_last_reply = heap_caps_malloc(sizeof(*s_last_reply), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (s_last_reply == NULL) {
+            return;   /* No repeat, but nothing else breaks. */
+        }
+    }
+    *s_last_reply = *reply;
+
+    /* Repeating the words must not repeat the side effects. */
+    s_last_reply->open_settings   = false;
+    s_last_reply->open_examples   = false;
+    s_last_reply->open_calculator = false;
+    s_have_last_reply = true;
+}
+
+static void answer_repeat(voice_reply_t *reply)
+{
+    if (s_have_last_reply && s_last_reply != NULL) {
+        *reply = *s_last_reply;
+        return;
+    }
+    reply_reset(reply);
+    reply->emotion = FACE_EMOTION_CONFUSED;
+    reply_set_text(reply, "%s", PICK(s_nothing_to_repeat));
 }
 
 /* ------------------------------------------------------------------------ */
@@ -788,8 +924,10 @@ static const char *confirmation_for_minutes(uint16_t minutes)
     switch (minutes) {
     case 1:  return "Timer set for one minute.";
     case 2:  return "Timer set for two minutes.";
+    case 3:  return "Timer set for three minutes.";
     case 5:  return "Timer set for five minutes.";
     case 10: return "Timer set for ten minutes.";
+    case 15: return "Timer set for fifteen minutes.";
     case 20: return "Timer set for twenty minutes.";
     case 30: return "Timer set for thirty minutes.";
     default: return "Timer set.";
@@ -939,7 +1077,7 @@ bool voice_local_brain_try_math(const char *question, voice_reply_t *reply)
     return true;
 }
 
-bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_reply_t *reply)
+static bool answer_action(voice_action_t action, const char *phrase, voice_reply_t *reply)
 {
     if (reply == NULL) {
         return false;
@@ -1133,6 +1271,34 @@ bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_r
         reply_set_text(reply, "%s", PICK(s_encouragement));
         break;
 
+    /* --- Added in v3.8 ---------------------------------------------------- */
+
+    case VOICE_ACTION_TELL_RIDDLE:
+        reply->emotion = FACE_EMOTION_MISCHIEF;
+        reply_set_text(reply, "%s", PICK(s_riddles));
+        break;
+
+    case VOICE_ACTION_NEVER_MIND:
+        reply->emotion = FACE_EMOTION_NEUTRAL;
+        reply_set_text(reply, "%s", PICK(s_never_mind));
+        break;
+
+    case VOICE_ACTION_WEATHER:
+        reply->emotion = FACE_EMOTION_SHEEPISH;
+        reply_set_text(reply, "%s", PICK(s_weather));
+        break;
+
+    case VOICE_ACTION_FAVOURITE_THING:
+        reply->emotion = FACE_EMOTION_DREAMY;
+        reply_set_text(reply, "%s", PICK(s_favourite_colours));
+        break;
+
+    case VOICE_ACTION_I_AM_BORED:
+        reply->emotion = FACE_EMOTION_PLAYFUL;
+        reply->play_antic = true;
+        reply_set_text(reply, "%s", PICK(s_bored_answers));
+        break;
+
     case VOICE_ACTION_TELL_DATE:
         answer_date(reply);
         break;
@@ -1174,6 +1340,14 @@ bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_r
         handle_volume(reply, -1);
         break;
 
+    case VOICE_ACTION_BRIGHTNESS_UP:
+        handle_brightness(reply, +1);
+        break;
+
+    case VOICE_ACTION_BRIGHTNESS_DOWN:
+        handle_brightness(reply, -1);
+        break;
+
     case VOICE_ACTION_OPEN_SETTINGS:
         reply->emotion = FACE_EMOTION_NEUTRAL;
         reply->open_settings = true;
@@ -1194,6 +1368,29 @@ bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_r
     }
 
     ESP_LOGI(TAG, "Answering: %s", reply->text);
+    return true;
+}
+
+bool voice_local_brain_answer(voice_action_t action, const char *phrase, voice_reply_t *reply)
+{
+    if (reply == NULL) {
+        return false;
+    }
+
+    if (action == VOICE_ACTION_REPEAT_THAT) {
+        answer_repeat(reply);
+        ESP_LOGI(TAG, "Repeating: %s", reply->text);
+        return true;
+    }
+
+    if (!answer_action(action, phrase, reply)) {
+        return false;
+    }
+
+    /* "Never mind" is not worth repeating; everything else is. */
+    if (action != VOICE_ACTION_NEVER_MIND) {
+        remember_reply(reply);
+    }
     return true;
 }
 
@@ -1241,6 +1438,7 @@ static const char *const s_did_not_understand[] = {
     "I only know set phrases, and that was not one of them. Try, what can you do.",
     "No idea what that was. Ask me for a joke instead.",
     "Not one of mine. Say, what can you do, and I will show you.",
+    "Sorry, I did not get that. Try saying it a little slower.",
 };
 
 void voice_local_brain_compose_did_not_understand(voice_reply_t *reply)

@@ -157,7 +157,7 @@ static lv_obj_t *create_stroke(lv_obj_t *parent, lv_coord_t width, lv_coord_t he
     lv_obj_clear_flag(line, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(line, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_size(line, width, height);
-    lv_obj_set_style_line_color(line, FACE_COLOR_ESPRESSIF_RED, LV_PART_MAIN);
+    lv_obj_set_style_line_color(line, FACE_COLOR_FACE, LV_PART_MAIN);
     lv_obj_set_style_line_width(line, thickness, LV_PART_MAIN);
     lv_obj_set_style_line_rounded(line, true, LV_PART_MAIN);
     return line;
@@ -669,7 +669,7 @@ esp_err_t face_view_create(lv_obj_t *parent)
 
     /* Blush goes in first so it sits behind everything else. */
     for (int side = 0; side < SIDE_COUNT; side++) {
-        s_blush[side] = create_bare_shape(s_root, FACE_HEX_BLUSH);
+        s_blush[side] = create_bare_shape(s_root, face_theme_hex(FACE_TOKEN_BLUSH));
         lv_obj_set_size(s_blush[side], FACE_BLUSH_DIAMETER, FACE_BLUSH_DIAMETER);
         lv_obj_set_style_radius(s_blush[side], LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(s_blush[side], LV_OPA_TRANSP, LV_PART_MAIN);
@@ -677,14 +677,14 @@ esp_err_t face_view_create(lv_obj_t *parent)
 
     /* Eyes, each carrying the two crescent cutters that shape the lids. */
     for (int side = 0; side < SIDE_COUNT; side++) {
-        s_eye[side] = create_bare_shape(s_root, FACE_HEX_ESPRESSIF_RED);
+        s_eye[side] = create_bare_shape(s_root, face_theme_hex(FACE_TOKEN_FACE));
         /* Clip the cutters to the eye's rounded outline, not just its box. */
         lv_obj_set_style_clip_corner(s_eye[side], true, LV_PART_MAIN);
 
-        s_eye_lower_cutter[side] = create_bare_shape(s_eye[side], FACE_HEX_BACKGROUND);
+        s_eye_lower_cutter[side] = create_bare_shape(s_eye[side], face_theme_hex(FACE_TOKEN_BACKGROUND));
         lv_obj_set_style_radius(s_eye_lower_cutter[side], LV_RADIUS_CIRCLE, LV_PART_MAIN);
 
-        s_eye_upper_cutter[side] = create_bare_shape(s_eye[side], FACE_HEX_BACKGROUND);
+        s_eye_upper_cutter[side] = create_bare_shape(s_eye[side], face_theme_hex(FACE_TOKEN_BACKGROUND));
         lv_obj_set_style_radius(s_eye_upper_cutter[side], LV_RADIUS_CIRCLE, LV_PART_MAIN);
     }
 
@@ -698,7 +698,7 @@ esp_err_t face_view_create(lv_obj_t *parent)
     s_mouth_line = create_stroke(s_root, MOUTH_CANVAS_WIDTH, MOUTH_CANVAS_HEIGHT,
                                  FACE_MOUTH_THICKNESS);
 
-    s_mouth_open = create_bare_shape(s_root, FACE_HEX_ESPRESSIF_RED);
+    s_mouth_open = create_bare_shape(s_root, face_theme_hex(FACE_TOKEN_FACE));
     lv_obj_set_style_radius(s_mouth_open, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_add_flag(s_mouth_open, LV_OBJ_FLAG_HIDDEN);
 

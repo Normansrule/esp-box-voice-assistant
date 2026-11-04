@@ -36,6 +36,13 @@ extern "C" {
 esp_err_t hw_display_init(void);
 
 /**
+ * @brief Whether the touch controller came up and is feeding LVGL.
+ *
+ * false means the screen works but touch input is unavailable.
+ */
+bool hw_display_has_touch(void);
+
+/**
  * @brief Take the LVGL mutex.
  *
  * @param timeout_ms  How long to wait. 0 means wait forever.

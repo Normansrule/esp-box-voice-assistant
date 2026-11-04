@@ -553,6 +553,10 @@ TEST(every_offline_reply_is_a_whole_sentence_so_it_can_be_spoken)
         "You rolled a six.",
         "Timer cancelled.",
         "There is no timer running.",
+        "Timer set for three minutes.",
+        "Timer set for fifteen minutes.",
+        "I have not said anything yet.",
+        "Fair enough.",
     };
 
     const size_t count = sizeof(conversational_replies) / sizeof(conversational_replies[0]);
@@ -1610,6 +1614,7 @@ TEST(every_fragment_the_code_names_is_in_the_recorded_list)
         VOICE_FRAGMENT_IN_HERE,
         VOICE_FRAGMENT_HUMIDITY_IS, VOICE_FRAGMENT_PERCENT,
         VOICE_FRAGMENT_VOLUME_UP_TO, VOICE_FRAGMENT_VOLUME_DOWN_TO,
+        VOICE_FRAGMENT_BRIGHTNESS_UP_TO, VOICE_FRAGMENT_BRIGHTNESS_DOWN_TO,
         VOICE_FRAGMENT_ABOUT, VOICE_FRAGMENT_MINUTE_LEFT, VOICE_FRAGMENT_MINUTES_LEFT,
         VOICE_FRAGMENT_SECOND_LEFT, VOICE_FRAGMENT_SECONDS_LEFT,
         VOICE_FRAGMENT_MINUTES_AND, VOICE_FRAGMENT_THATS,
@@ -2314,8 +2319,10 @@ TEST(every_timer_phrase_names_a_duration_it_can_actually_set)
     } expectations[] = {
         { "set a timer for one minute",     1 },
         { "set a timer for two minutes",    2 },
+        { "set a timer for three minutes",  3 },
         { "set a timer for five minutes",   5 },
         { "set a timer for ten minutes",   10 },
+        { "set a timer for fifteen minutes", 15 },
         { "set a timer for twenty minutes", 20 },
         { "set a timer for thirty minutes", 30 },
     };

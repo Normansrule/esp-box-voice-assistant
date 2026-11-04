@@ -18,6 +18,23 @@ static const char *TAG = "ui_bubble";
 /** How long the face takes to slide up or down when the bubble appears. */
 #define FACE_SLIDE_MS       220
 
+/*
+ * The caption's own entrance: it rises a few pixels and fades in, finishing
+ * just before the face settles, so the two read as one movement. Leaving is
+ * quicker than arriving. Both animate colours' alpha and a translation only,
+ * never the object-wide "opa" style: in LVGL 8 that renders the bubble through
+ * an off-screen layer buffer, which is internal RAM this build does not have.
+ */
+#define CAPTION_ENTER_MS    180
+#define CAPTION_EXIT_MS     120
+#define CAPTION_RISE_PX     8
+
+#if defined(CONFIG_BUDDY_UI_REDUCED_MOTION) && CONFIG_BUDDY_UI_REDUCED_MOTION
+#define CAPTION_ANIMATE     0
+#else
+#define CAPTION_ANIMATE     1
+#endif
+
 static lv_obj_t   *s_bubble;
 static lv_obj_t   *s_label;
 static lv_timer_t *s_hide_timer;
@@ -109,6 +126,60 @@ static lv_coord_t fit_bubble_to_text(const char *text)
 }
 
 /**
+ * @brief Apply one step of the enter/exit fade: 0 is invisible, 255 is fully in.
+ */
+static void caption_fade_cb(void *obj, int32_t value)
+{
+    (void)obj;
+    const lv_opa_t opa = (lv_opa_t)value;
+    lv_obj_set_style_bg_opa(s_bubble, opa, LV_PART_MAIN);
+    lv_obj_set_style_border_opa(s_bubble, opa, LV_PART_MAIN);
+    lv_obj_set_style_text_opa(s_label, opa, LV_PART_MAIN);
+    lv_obj_set_style_translate_y(s_bubble,
+                                 (lv_coord_t)(((255 - value) * CAPTION_RISE_PX) / 255),
+                                 LV_PART_MAIN);
+}
+
+/** @brief The exit fade finished: now actually hide the bubble. */
+static void caption_exit_done_cb(lv_anim_t *anim)
+{
+    (void)anim;
+    if (!s_visible) {
+        lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+/**
+ * @brief Run the fade from @p from to @p to. Replaces any fade already running.
+ */
+static void caption_fade(int32_t from, int32_t to, uint32_t duration_ms,
+                         lv_anim_ready_cb_t ready_cb)
+{
+    lv_anim_del(s_bubble, caption_fade_cb);
+
+#if CAPTION_ANIMATE
+    lv_anim_t anim;
+    lv_anim_init(&anim);
+    lv_anim_set_var(&anim, s_bubble);
+    lv_anim_set_exec_cb(&anim, caption_fade_cb);
+    lv_anim_set_values(&anim, from, to);
+    lv_anim_set_time(&anim, duration_ms);
+    lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
+    if (ready_cb != NULL) {
+        lv_anim_set_ready_cb(&anim, ready_cb);
+    }
+    lv_anim_start(&anim);
+#else
+    (void)from;
+    (void)duration_ms;
+    caption_fade_cb(s_bubble, to);
+    if (ready_cb != NULL) {
+        ready_cb(NULL);
+    }
+#endif
+}
+
+/**
  * @brief Timer callback that hides the bubble once its welcome is worn out.
  */
 static void auto_hide_timer_cb(lv_timer_t *timer)
@@ -152,7 +223,12 @@ esp_err_t ui_speech_bubble_create(lv_obj_t *parent)
 
     lv_obj_set_style_bg_color(s_bubble, FACE_COLOR_SURFACE, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_bubble, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_radius(s_bubble, 16, LV_PART_MAIN);
+    /*
+     * Radius steps: chips 12, caption 14, screen corners are the panel's own.
+     * The hairline border is what separates the sheet from the background in
+     * the day theme, where the two warm tones are deliberately close.
+     */
+    lv_obj_set_style_radius(s_bubble, 14, LV_PART_MAIN);
     lv_obj_set_style_border_width(s_bubble, 1, LV_PART_MAIN);
     lv_obj_set_style_border_color(s_bubble, FACE_COLOR_SURFACE_BORDER, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_bubble, BUDDY_SPEECH_BUBBLE_PADDING, LV_PART_MAIN);
@@ -171,6 +247,7 @@ esp_err_t ui_speech_bubble_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(s_label, s_caption_fonts[0], LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label, FACE_COLOR_TEXT, LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN);
+    lv_obj_set_style_text_line_space(s_label, 2, LV_PART_MAIN);
     lv_label_set_text(s_label, "");
     lv_obj_align(s_label, LV_ALIGN_TOP_LEFT, 0, 0);
 
@@ -216,8 +293,18 @@ void ui_speech_bubble_show(ui_speech_source_t source, const char *text, uint32_t
      */
     const lv_coord_t bubble_height = fit_bubble_to_text(text);
 
+    /*
+     * Fade in only when the bubble was away. Swapping one caption for the
+     * next while it is already up just changes the words, without a flicker.
+     */
+    const bool was_visible = s_visible;
     lv_obj_clear_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(s_bubble);
+    if (!was_visible) {
+        caption_fade(0, 255, CAPTION_ENTER_MS, NULL);
+    } else {
+        caption_fade(255, 255, 0, NULL);   /* Cancel a half-finished exit. */
+    }
 
     /* Lift the face by an amount that suits the bubble actually on screen. */
     int16_t lift = (int16_t)(bubble_height / BUDDY_FACE_LIFT_DIVISOR);
@@ -249,11 +336,12 @@ void ui_speech_bubble_hide(void)
         s_hide_timer = NULL;
     }
 
-    lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
-
     if (s_visible) {
         s_visible = false;
         face_view_set_vertical_shift(0, FACE_SLIDE_MS);
+        caption_fade(255, 0, CAPTION_EXIT_MS, caption_exit_done_cb);
+    } else {
+        lv_obj_add_flag(s_bubble, LV_OBJ_FLAG_HIDDEN);
     }
 }
 

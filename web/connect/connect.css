@@ -1,27 +1,30 @@
 /*
  * Desk Buddy Connect - styles.
  * Same palette as the site and the firmware (main/face/face_theme.h):
- * Espressif red on white. Self-contained so the desktop app can ship it.
+ * the PAPER theme: ink on warm paper, one vermilion accent. Self-contained so
+ * the desktop app can ship it (system fonts if Instrument Sans is not installed).
  */
 :root {
-  --red: #E8362D;
-  --red-dark: #B8241C;
-  --blush: #F7ADA8;
-  --bg: #FFFFFF;
-  --text: #2B2B2B;
-  --muted: #6B7079;
-  --surface: #F2F3F5;
-  --border: #E0E2E6;
-  --ok: #1F8A4C;
-  --warn: #A86A00;
-  --term-bg: #111214;
-  --term-text: #E6E6E6;
-  --radius: 18px;
-  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --red: #C42A20;          /* FACE_HEX_ACCENT: text-safe, white on it is 5.7:1 */
+  --red-dark: #9E1F17;     /* FACE_HEX_ESPRESSIF_RED_DARK */
+  --face: #E8362D;         /* FACE_HEX_ESPRESSIF_RED: the face only */
+  --blush: #F3B4AB;        /* FACE_HEX_BLUSH */
+  --bg: #F6F3EE;           /* FACE_HEX_BACKGROUND: warm paper */
+  --text: #1E1B18;         /* FACE_HEX_TEXT */
+  --muted: #5F5952;        /* FACE_HEX_TEXT_MUTED */
+  --surface: #EBE6DF;      /* FACE_HEX_SURFACE */
+  --border: #D9D2C8;       /* FACE_HEX_SURFACE_BORDER */
+  --card: #FBF9F6;
+  --ok: #2F6B3F;
+  --warn: #7A4B00;
+  --term-bg: #13110F;      /* EMBER background */
+  --term-text: #F1ECE5;    /* EMBER text */
+  --radius: 14px;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-/* Always light: the box itself is red on white, and so is this page. */
+/* Always light: the box draws on warm paper by default, and so does this page. */
 :root { color-scheme: light; }
 
 * { box-sizing: border-box; }
@@ -39,8 +42,7 @@ code { font: 500 .9em var(--mono); background: var(--surface); padding: 1px 6px;
 .mt { margin-top: 22px; }
 
 /* ---------- Top bar ---------- */
-.bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+.bar { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--border); }
 .bar-row { display: flex; align-items: center; gap: 14px; height: 60px; }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; font-weight: 600; margin-right: auto; }
 .brand b { color: var(--red); font-weight: 700; }
@@ -66,7 +68,7 @@ code { font: 500 .9em var(--mono); background: var(--surface); padding: 1px 6px;
 .intro { padding: 40px 0 8px; display: flow-root; }
 .intro-device { float: right; width: min(300px, 38%); height: auto; margin: -10px 0 8px 24px; }
 @media (max-width: 640px) { .intro-device { float: none; display: block; width: 70%; margin: 0 auto 8px; } }
-.intro h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.08; letter-spacing: -.02em; margin: 0 0 12px; }
+.intro h1 { font-size: clamp(30px, 5vw, 48px); line-height: 1.04; letter-spacing: -.03em; font-weight: 700; margin: 0 0 12px; text-wrap: balance; }
 .intro p { color: var(--muted); max-width: 680px; margin: 0; }
 .steps { margin: 20px 0 0; padding-left: 22px; color: var(--muted); }
 .steps li { margin: 4px 0; }
@@ -86,7 +88,7 @@ code { font: 500 .9em var(--mono); background: var(--surface); padding: 1px 6px;
 .grid2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 @media (max-width: 960px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; min-width: 0; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px; min-width: 0; }
 .card h2 { font-size: 16px; margin: 0 0 14px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .card-head h2 { margin: 0; }
@@ -177,7 +179,7 @@ dialog h2 { margin: 0 0 12px; font-size: 18px; }
 /* Live motion and battery card */
 .live-card { margin-top: 18px; }
 .live-tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--red);
-  background: rgba(232, 54, 45, .08); padding: 3px 7px; border-radius: 99px; vertical-align: 3px; margin-left: 6px; }
+  background: color-mix(in srgb, var(--red) 9%, var(--bg)); padding: 3px 7px; border-radius: 99px; vertical-align: 3px; margin-left: 6px; }
 .live-grid { display: grid; grid-template-columns: 180px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 820px) { .live-grid { grid-template-columns: minmax(0, 1fr); } }
 .level svg { width: 100%; max-width: 180px; display: block; margin: 0 auto; }
@@ -189,3 +191,9 @@ dialog h2 { margin: 0 0 12px; font-size: 18px; }
 .row.wrap { flex-wrap: wrap; }
 .small { font-size: 12.5px; }
 
+
+/* ---------- Browser surfaces in the same palette ---------- */
+::selection { background: var(--blush); color: var(--text); }
+input, textarea { caret-color: var(--red); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+body { font-variant-numeric: tabular-nums; }

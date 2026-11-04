@@ -81,114 +81,12 @@ dependencies:
       registry_url: https://components.espressif.com
       type: service
     version: 0.5.3
-  espressif/esp-box:
-    component_hash: cb7a15328ccf8ffdde5abaa86ee5cc0dde2f33c23ce898b048e9012d04be599e
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=4.4.5'
-    - name: espressif/button
-      registry_url: https://components.espressif.com
-      require: public
-      version: '>=2.5'
-    - name: espressif/esp_codec_dev
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1.0.3
-    - name: espressif/esp_lcd_touch_tt21100
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^1
-    - name: espressif/esp_lvgl_port
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: espressif/icm42670
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: lvgl/lvgl
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^8
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    targets:
-    - esp32s3
-    version: 3.0.5
   espressif/esp-box-3:
-    component_hash: 13b258241e2cb4f15a53511b46ba15412eab9a5da403c832258f826ff50c4aab
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=4.4.5'
-    - name: espressif/button
-      registry_url: https://components.espressif.com
-      require: public
-      version: '>=2.5'
-    - name: espressif/esp_codec_dev
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: espressif/esp_lcd_ili9341
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^1
-    - name: espressif/esp_lcd_touch_gt911
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^1
-    - name: espressif/esp_lcd_touch_tt21100
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^1
-    - name: espressif/esp_lvgl_port
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: espressif/icm42670
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: lvgl/lvgl
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^8
+    dependencies: []
     source:
-      registry_url: https://components.espressif.com/
-      type: service
-    targets:
-    - esp32s3
+      path: C:\Users\aleks\Desktop\ESP-BOX-Voice_Assistance\components\espressif__esp-box-3
+      type: local
     version: 1.1.3
-  espressif/esp-box-lite:
-    component_hash: b5a6640825aea1372d84c30a7a81481cfc704bb6783d5cfc08e65f51374a1463
-    dependencies:
-    - name: idf
-      require: private
-      version: '>=4.4.5'
-    - name: espressif/button
-      registry_url: https://components.espressif.com
-      require: public
-      version: '>=2.4'
-    - name: espressif/esp_codec_dev
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1.0.3
-    - name: espressif/esp_lvgl_port
-      registry_url: https://components.espressif.com
-      require: public
-      version: ^1
-    - name: lvgl/lvgl
-      registry_url: https://components.espressif.com
-      require: private
-      version: ^8
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    targets:
-    - esp32s3
-    version: 2.0.4
   espressif/esp-dsp:
     component_hash: ed9ac175b14e0414399a2b33c525579414b5bad19a2a67b12ea212def96f9a98
     dependencies:
@@ -239,7 +137,7 @@ dependencies:
       require: private
       version: 0.*
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.2.0
   espressif/esp_lcd_touch:
@@ -263,7 +161,7 @@ dependencies:
       require: private
       version: '>=5.2'
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.2.1
   espressif/esp_lcd_touch_tt21100:
@@ -277,7 +175,7 @@ dependencies:
       require: private
       version: '>=5.2'
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.2.1
   espressif/esp_lvgl_port:
@@ -291,7 +189,7 @@ dependencies:
       require: public
       version: ^8
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.4.0
   espressif/icm42670:
@@ -301,7 +199,7 @@ dependencies:
       require: private
       version: '>=4.4'
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.0.0
   espressif/openai:
@@ -326,7 +224,7 @@ dependencies:
     component_hash: d7c1ac037ae6e85d94897f807d6e7ba0946a83e720074fc95a4f6241da9f9f53
     dependencies: []
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 8.4.0
 direct_dependencies:
@@ -334,13 +232,17 @@ direct_dependencies:
 - espressif/aht20
 - espressif/at581x
 - espressif/button
-- espressif/esp-box
 - espressif/esp-box-3
-- espressif/esp-box-lite
 - espressif/esp-sr
 - espressif/esp_codec_dev
+- espressif/esp_lcd_ili9341
+- espressif/esp_lcd_touch_gt911
+- espressif/esp_lcd_touch_tt21100
+- espressif/esp_lvgl_port
+- espressif/icm42670
 - espressif/openai
 - idf
-manifest_hash: 54abdd1f79509d0975dbc87ddbc1494ceaaed470cb4c52dbee6442262987a380
+- lvgl/lvgl
+manifest_hash: a3a8c919287ff4e6dca1420894e22e327feb5eb68ef4fe202077c290dc159ebf
 target: esp32s3
 version: 2.0.0

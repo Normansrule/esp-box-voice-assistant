@@ -9,13 +9,15 @@ window.FIRMWARE = {
  },
  "theme": {
   "espressif_red": "#E8362D",
-  "espressif_red_dark": "#B8241C",
-  "blush": "#F7ADA8",
-  "background": "#FFFFFF",
-  "text": "#2B2B2B",
-  "text_muted": "#8A8F98",
-  "surface": "#F2F3F5",
-  "surface_border": "#E0E2E6"
+  "accent": "#C42A20",
+  "espressif_red_dark": "#9E1F17",
+  "blush": "#F3B4AB",
+  "background": "#F6F3EE",
+  "text": "#1E1B18",
+  "text_muted": "#5F5952",
+  "surface": "#EBE6DF",
+  "surface_border": "#D9D2C8",
+  "on_accent": "#FFFFFF"
  },
  "geometry": {
   "BUDDY_SCREEN_WIDTH": 320,
@@ -1844,6 +1846,10 @@ window.FIRMWARE = {
    "phrase": "how are you today"
   },
   {
+   "action": "how_are_you",
+   "phrase": "how are you feeling"
+  },
+  {
    "action": "what_can_you_do",
    "phrase": "what can you do"
   },
@@ -1860,6 +1866,10 @@ window.FIRMWARE = {
    "phrase": "make me laugh"
   },
   {
+   "action": "tell_joke",
+   "phrase": "tell me something funny"
+  },
+  {
    "action": "who_made_you",
    "phrase": "who made you"
   },
@@ -1872,6 +1882,10 @@ window.FIRMWARE = {
    "phrase": "go to sleep now"
   },
   {
+   "action": "goodbye",
+   "phrase": "good night buddy"
+  },
+  {
    "action": "tell_time",
    "phrase": "what time is it"
   },
@@ -1880,12 +1894,20 @@ window.FIRMWARE = {
    "phrase": "tell me the time"
   },
   {
+   "action": "tell_time",
+   "phrase": "what is the time"
+  },
+  {
    "action": "tell_date",
    "phrase": "what is the date"
   },
   {
    "action": "tell_date",
    "phrase": "what day is it"
+  },
+  {
+   "action": "tell_date",
+   "phrase": "what is the date today"
   },
   {
    "action": "tell_temperature",
@@ -2196,6 +2218,34 @@ window.FIRMWARE = {
    "phrase": "cheer me up"
   },
   {
+   "action": "encourage_me",
+   "phrase": "i feel sad today"
+  },
+  {
+   "action": "tell_riddle",
+   "phrase": "tell me a riddle"
+  },
+  {
+   "action": "repeat_that",
+   "phrase": "say that again"
+  },
+  {
+   "action": "never_mind",
+   "phrase": "never mind"
+  },
+  {
+   "action": "weather",
+   "phrase": "what is the weather like"
+  },
+  {
+   "action": "favourite_thing",
+   "phrase": "what is your favorite color"
+  },
+  {
+   "action": "i_am_bored",
+   "phrase": "i am so bored"
+  },
+  {
    "action": "timer_set",
    "phrase": "set a timer for one minute"
   },
@@ -2205,11 +2255,19 @@ window.FIRMWARE = {
   },
   {
    "action": "timer_set",
+   "phrase": "set a timer for three minutes"
+  },
+  {
+   "action": "timer_set",
    "phrase": "set a timer for five minutes"
   },
   {
    "action": "timer_set",
    "phrase": "set a timer for ten minutes"
+  },
+  {
+   "action": "timer_set",
+   "phrase": "set a timer for fifteen minutes"
   },
   {
    "action": "timer_set",
@@ -2288,12 +2346,20 @@ window.FIRMWARE = {
    "phrase": "thank you buddy"
   },
   {
+   "action": "thank_you",
+   "phrase": "thanks a lot"
+  },
+  {
    "action": "compliment",
    "phrase": "you are the best"
   },
   {
    "action": "compliment",
    "phrase": "i really like you"
+  },
+  {
+   "action": "compliment",
+   "phrase": "i love you buddy"
   },
   {
    "action": "good_morning",
@@ -2322,6 +2388,22 @@ window.FIRMWARE = {
   {
    "action": "volume_down",
    "phrase": "turn the volume down"
+  },
+  {
+   "action": "volume_up",
+   "phrase": "make it louder"
+  },
+  {
+   "action": "volume_down",
+   "phrase": "make it quieter"
+  },
+  {
+   "action": "brightness_up",
+   "phrase": "make the screen brighter"
+  },
+  {
+   "action": "brightness_down",
+   "phrase": "make the screen darker"
   },
   {
    "action": "open_settings",
@@ -2851,6 +2933,14 @@ window.FIRMWARE = {
     {
      "text": "Oh hey, you are back.",
      "clip": "5b489fae"
+    },
+    {
+     "text": "Hello! I was just practising my blinking.",
+     "clip": "1fbd6b8a"
+    },
+    {
+     "text": "Hi. You have my full attention, which is all of it.",
+     "clip": "8e830626"
     }
    ],
    "runtime": false
@@ -2874,6 +2964,10 @@ window.FIRMWARE = {
     {
      "text": "Happy. Slightly bored. Mostly happy.",
      "clip": "43df80bd"
+    },
+    {
+     "text": "Better now that someone is talking to me.",
+     "clip": "d2a4ec8f"
     }
    ],
    "runtime": false
@@ -2981,6 +3075,10 @@ window.FIRMWARE = {
     {
      "text": "See you soon.",
      "clip": "843bc518"
+    },
+    {
+     "text": "Good night. I will keep an ear out.",
+     "clip": "22d35ee1"
     }
    ],
    "runtime": false
@@ -3151,6 +3249,14 @@ window.FIRMWARE = {
     {
      "text": "Happy to help. It beats sitting here blinking.",
      "clip": "c2976173"
+    },
+    {
+     "text": "No problem at all.",
+     "clip": "4404bd69"
+    },
+    {
+     "text": "My pleasure. Genuinely. I do not get out much.",
+     "clip": "a3c66684"
     }
    ],
    "runtime": false
@@ -3170,6 +3276,14 @@ window.FIRMWARE = {
     {
      "text": "You are alright yourself.",
      "clip": "a2a55bca"
+    },
+    {
+     "text": "Stop it, my cheeks would go red if I had any.",
+     "clip": "0a2ac678"
+    },
+    {
+     "text": "I like you too. You are my favourite person on this desk.",
+     "clip": "9275efa9"
     }
    ],
    "runtime": false
@@ -3189,6 +3303,10 @@ window.FIRMWARE = {
     {
      "text": "Morning. I checked, and the temperature is fine.",
      "clip": "160f870b"
+    },
+    {
+     "text": "Good morning! Ready when you are.",
+     "clip": "82dfa4ed"
     }
    ],
    "runtime": false
@@ -3253,8 +3371,8 @@ window.FIRMWARE = {
      "clip": "6ed8b75c"
     },
     {
-     "text": "There is no battery in me. Every time you unplug me, I forget what time it is and have to ask the internet.",
-     "clip": "dbd21f67"
+     "text": "Without a battery in my dock, unplugging me wipes my clock.",
+     "clip": "6f79f49b"
     }
    ],
    "runtime": false
@@ -3421,6 +3539,113 @@ window.FIRMWARE = {
     {
      "text": "Whatever it is, you have solved worse. I was there for some of it.",
      "clip": "f564b9b5"
+    },
+    {
+     "text": "I am only a small box, but I am on your side.",
+     "clip": "b82b138c"
+    }
+   ],
+   "runtime": false
+  },
+  "tell_riddle": {
+   "emotion": "mischief",
+   "antic": false,
+   "lines": [
+    {
+     "text": "What has keys but cannot open a single lock? A keyboard.",
+     "clip": "65fa24c6"
+    },
+    {
+     "text": "What gets wetter the more it dries? A towel.",
+     "clip": "caa75cca"
+    },
+    {
+     "text": "What has a face and two hands but no arms? A clock.",
+     "clip": "aaf533b3"
+    },
+    {
+     "text": "What can you catch but never throw? A cold.",
+     "clip": "91e4cd96"
+    },
+    {
+     "text": "What has to be broken before you can use it? An egg.",
+     "clip": "f1e98445"
+    },
+    {
+     "text": "The more of them you take, the more you leave behind. What are they? Footsteps.",
+     "clip": "c89ce5d6"
+    },
+    {
+     "text": "What goes up but never comes down? Your age.",
+     "clip": "d8740ca7"
+    },
+    {
+     "text": "What has one eye but cannot see? A needle.",
+     "clip": "137b0ec4"
+    }
+   ],
+   "runtime": false
+  },
+  "never_mind": {
+   "emotion": "neutral",
+   "antic": false,
+   "lines": [
+    {
+     "text": "Okay. Forgotten already.",
+     "clip": "85f6bf6f"
+    },
+    {
+     "text": "No problem. I will be here.",
+     "clip": "9e5a66b3"
+    },
+    {
+     "text": "Fair enough.",
+     "clip": "3d471761"
+    }
+   ],
+   "runtime": false
+  },
+  "weather": {
+   "emotion": "sheepish",
+   "antic": false,
+   "lines": [
+    {
+     "text": "I have no window and no forecast. Ask how warm it is in here instead.",
+     "clip": "5c0a5698"
+    }
+   ],
+   "runtime": false
+  },
+  "favourite_thing": {
+   "emotion": "dreamy",
+   "antic": false,
+   "lines": [
+    {
+     "text": "Red. Espressif red, specifically. I am biased, I am made of it.",
+     "clip": "89e9da72"
+    },
+    {
+     "text": "Blue. It is the colour of a Wi-Fi light that is working.",
+     "clip": "089516d5"
+    }
+   ],
+   "runtime": false
+  },
+  "i_am_bored": {
+   "emotion": "playful",
+   "antic": true,
+   "lines": [
+    {
+     "text": "Ask me for a riddle. Or a story. Or poke my screen and see what I do.",
+     "clip": "e91a02cb"
+    },
+    {
+     "text": "Want to play rock paper scissors? Just say it.",
+     "clip": "770fb457"
+    },
+    {
+     "text": "Bored is just your brain asking for something new. Ask me for a fact.",
+     "clip": "a4ef6b73"
     }
    ],
    "runtime": false
@@ -3468,6 +3693,18 @@ window.FIRMWARE = {
    "runtime": true
   },
   "volume_down": {
+   "emotion": null,
+   "antic": false,
+   "lines": [],
+   "runtime": true
+  },
+  "brightness_up": {
+   "emotion": null,
+   "antic": false,
+   "lines": [],
+   "runtime": true
+  },
+  "brightness_down": {
    "emotion": null,
    "antic": false,
    "lines": [],
@@ -3536,5 +3773,5 @@ window.FIRMWARE = {
    0
   ]
  ],
- "voice_clip_count": 356
+ "voice_clip_count": 393
 };

@@ -150,7 +150,10 @@ hw_battery_reading_t hw_battery_read(void)
     reading.available = true;
     reading.pin_mv = (uint16_t)(sum_mv / good);
     reading.battery_mv = (uint16_t)(((uint32_t)reading.pin_mv * DIVIDER_NUMERATOR) / DIVIDER_DENOMINATOR);
-    reading.percent_est = hw_battery_estimate_percent(reading.battery_mv);
-    reading.low = reading.battery_mv < BUDDY_BATTERY_LOW_MV;
+    reading.cell_detected = reading.battery_mv >= BUDDY_BATTERY_PRESENT_MV;
+    if (reading.cell_detected) {
+        reading.percent_est = hw_battery_estimate_percent(reading.battery_mv);
+        reading.low = reading.battery_mv < BUDDY_BATTERY_LOW_MV;
+    }
     return reading;
 }

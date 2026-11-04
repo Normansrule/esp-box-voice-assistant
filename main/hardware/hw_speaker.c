@@ -220,6 +220,41 @@ static esp_err_t speaker_mute_cb(AUDIO_PLAYER_MUTE_SETTING setting)
     return ESP_OK;
 }
 
+/*
+ * The format the codec was last set to, so it is only reconfigured when the
+ * format actually changes.
+ *
+ * bsp_codec_set_fs() closes and reopens both codec devices. In esp_codec_dev
+ * 1.1.0 that reopen calls i2s_channel_disable() on a channel the close has
+ * already disabled, which is where the "i2s_channel_disable(1262): the channel
+ * has not been enabled yet" errors on every wake came from. They were harmless,
+ * but the reconfiguration itself is the risky part (see play_wav below), and
+ * every chime was doing it to land on the format the codec already had.
+ */
+static uint32_t       s_codec_rate;
+static uint32_t       s_codec_bits;
+static i2s_slot_mode_t s_codec_channels;
+static bool           s_codec_format_known;
+
+esp_err_t hw_speaker_set_codec_format(uint32_t rate, uint32_t bits_per_sample,
+                                      i2s_slot_mode_t channels, bool force)
+{
+    if (!force && s_codec_format_known && rate == s_codec_rate &&
+        bits_per_sample == s_codec_bits && channels == s_codec_channels) {
+        return ESP_OK;
+    }
+    const esp_err_t err = bsp_codec_set_fs(rate, bits_per_sample, channels);
+    if (err == ESP_OK) {
+        s_codec_rate = rate;
+        s_codec_bits = bits_per_sample;
+        s_codec_channels = channels;
+        s_codec_format_known = true;
+    } else {
+        s_codec_format_known = false;   /* unknown state: reconfigure next time */
+    }
+    return err;
+}
+
 /**
  * @brief The player asks for a new sample rate whenever a track starts.
  *
@@ -239,7 +274,8 @@ static esp_err_t speaker_clock_cb(uint32_t rate, uint32_t bits_per_sample, i2s_s
                  rate, BUDDY_AUDIO_SAMPLE_RATE_HZ);
     }
 
-    esp_err_t err = bsp_codec_set_fs(BUDDY_AUDIO_SAMPLE_RATE_HZ, bits_per_sample, channels);
+    esp_err_t err = hw_speaker_set_codec_format(BUDDY_AUDIO_SAMPLE_RATE_HZ, bits_per_sample,
+                                                channels, false);
 
     /* Toggling mute forces the codec to latch the new clock cleanly. */
     bsp_codec_mute_set(true);
@@ -438,9 +474,9 @@ esp_err_t hw_speaker_play_wav_blocking(const char *path)
                  path, header.sample_rate, BUDDY_AUDIO_SAMPLE_RATE_HZ);
     }
 
-    bsp_codec_set_fs(BUDDY_AUDIO_SAMPLE_RATE_HZ,
-                     (uint32_t)header.bits_per_sample,
-                     I2S_SLOT_MODE_STEREO);
+    hw_speaker_set_codec_format(BUDDY_AUDIO_SAMPLE_RATE_HZ,
+                                (uint32_t)header.bits_per_sample,
+                                I2S_SLOT_MODE_STEREO, false);
     bsp_codec_mute_set(true);
     bsp_codec_mute_set(false);
     bsp_codec_volume_set(BUDDY_CHIME_VOLUME, NULL);
@@ -586,7 +622,8 @@ void hw_speaker_restore_capture_format(void)
     audio_resampler_begin(&s_resampler, BUDDY_AUDIO_SAMPLE_RATE_HZ,
                           BUDDY_AUDIO_SAMPLE_RATE_HZ, 2);
 
-    bsp_codec_set_fs(BUDDY_AUDIO_SAMPLE_RATE_HZ,
-                     BUDDY_AUDIO_BITS_PER_SAMPLE,
-                     I2S_SLOT_MODE_STEREO);
+    /* Forced: this is the "whatever happened, put it back" path. */
+    hw_speaker_set_codec_format(BUDDY_AUDIO_SAMPLE_RATE_HZ,
+                                BUDDY_AUDIO_BITS_PER_SAMPLE,
+                                I2S_SLOT_MODE_STEREO, true);
 }

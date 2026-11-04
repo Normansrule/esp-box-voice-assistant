@@ -86,7 +86,9 @@ static void check_battery(bool *warned)
     printf("BATT,%lld,%u,%u,%u\n", (long long)(esp_timer_get_time() / 1000),
            b.pin_mv, b.battery_mv, b.percent_est);
 
-    if (b.low && !*warned) {
+    if (!b.cell_detected) {
+        *warned = false;   /* nothing to warn about until a cell shows up */
+    } else if (b.low && !*warned) {
         char text[64];
         snprintf(text, sizeof(text), "My battery is low: %u.%02u V.",
                  b.battery_mv / 1000, (b.battery_mv % 1000) / 10);

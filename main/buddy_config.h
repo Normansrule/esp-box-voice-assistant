@@ -622,5 +622,12 @@
 /** Below this the buddy says the battery is low (once per discharge). */
 #define BUDDY_BATTERY_LOW_MV            3450
 
+/**
+ * Below this no cell is counted as present. An empty holder (or the dock
+ * switched off) reads close to 0 V, and a protected Li-ion cell cannot sit
+ * this low: its DW01-A protection disconnects it at about 2.4 V.
+ */
+#define BUDDY_BATTERY_PRESENT_MV        2500
+
 /** How often the battery is measured and logged. */
 #define BUDDY_BATTERY_REFRESH_MS        10000

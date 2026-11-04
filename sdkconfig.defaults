@@ -55,6 +55,8 @@ CONFIG_SPIRAM_SPEED_80M=y
 # CONFIG_FREERTOS_TASK_CREATE_ALLOW_EXT_MEM is not set
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=1024
 CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+# Lets EXT_RAM_BSS_ATTR put large CPU-only statics (reports, track names) in PSRAM.
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
 # Internal RAM held in reserve for allocations that CANNOT live in PSRAM — DMA
 # buffers, and the I2C driver's command descriptors. Without a reserve, an
 # ordinary allocation spree (opening the settings screen builds a few hundred
@@ -110,6 +112,10 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 # ---------------------------------------------------------------------------
 CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=3
 CONFIG_ESP_WIFI_DYNAMIC_RX_BUFFER_NUM=8
+# Keep the TX buffers static and few. Dynamic TX buffers are not allowed when
+# CONFIG_SPIRAM_USE_MALLOC=y, so Kconfig silently falls back to static, and
+# without this line the count jumps to the default of 16 (~19 KB more
+# internal RAM; seen on device 2026-11-03).
 CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=4
 CONFIG_ESP_WIFI_CACHE_TX_BUFFER_NUM=16
 CONFIG_ESP_WIFI_TX_BA_WIN=4
@@ -159,10 +165,12 @@ CONFIG_ADC_BUTTON_MAX_BUTTON_PER_CHANNEL=4
 #   40 lines   50.0 KB   with double buffering: what starved the I2C driver
 #                        badly enough to abort inside the AHT20 sensor read
 #
-# 30 is the compromise: a third fewer round trips through the SPI bus than 20,
-# for 6 KB, which the boot self-test shows there is comfortably room for. If
-# "Internal RAM" ever drops near 35 KB, this is the first number to lower.
-CONFIG_BSP_LCD_DRAW_BUF_HEIGHT=30
+# 30 was the compromise while there was room for it. With the motion, battery
+# and console tasks added (3.7.x) the boot self-test measured only ~27 KB of
+# internal RAM free, below the 35 KB failure line, so this is back at 20 - the
+# first number to lower, as planned. Raise it again only if the self-test
+# shows comfortably more than 55 KB free afterwards.
+CONFIG_BSP_LCD_DRAW_BUF_HEIGHT=20
 CONFIG_LV_COLOR_16_SWAP=y
 CONFIG_LV_MEM_CUSTOM=y
 # Three caption sizes. ui_speech_bubble.c measures a caption at each in turn and

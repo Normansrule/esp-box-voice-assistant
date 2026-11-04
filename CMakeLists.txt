@@ -24,3 +24,13 @@ add_compile_options(-fdiagnostics-color=always
                     -Wno-unused-but-set-variable)
 
 project(esp_box_desk_buddy)
+
+# The OpenAI client is a downloaded component (managed_components), so its
+# source can't be edited here. It defines helper functions for API features
+# Desk Buddy doesn't use, which produces a page of harmless "defined but not
+# used" warnings. Silence just that warning, just for that one component.
+idf_build_get_property(desk_buddy_components BUILD_COMPONENTS)
+if("espressif__openai" IN_LIST desk_buddy_components)
+    idf_component_get_property(openai_lib espressif__openai COMPONENT_LIB)
+    target_compile_options(${openai_lib} PRIVATE -Wno-unused-function)
+endif()

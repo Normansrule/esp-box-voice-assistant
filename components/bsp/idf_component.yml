@@ -8,14 +8,13 @@ dependencies:
   espressif/button:
     version: "^3.5.0"
 
-  espressif/esp-box:
-    version: "3.0.*"
-    require: "no"
-
-  espressif/esp-box-lite:
-    version: "2.0.*"
-    require: "no"
-
+  # Only the BOX-3 board package is listed (2026-11-03). The original BOX and
+  # BOX-Lite packages were downloaded on every build even though they were never
+  # compiled, and their settings clashed with the BOX-3 ones in the build log
+  # ("Symbol ... defined in multiple locations"). To build for one of those
+  # boards again, add back:
+  #   espressif/esp-box:      { version: "3.0.*", require: "no" }
+  #   espressif/esp-box-lite: { version: "2.0.*", require: "no" }
   espressif/esp-box-3:
     version: "1.1.*"
     require: "no"

@@ -43,6 +43,7 @@ idf_component_register(
         "face/face_pose.c"
         "face/face_emotions.c"
         "face/face_view.c"
+        "face/face_theme.c"
         "face/face_animator.c"
 
         # Screens

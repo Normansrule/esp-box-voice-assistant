@@ -243,11 +243,13 @@ bool buddy_timer_minutes_from_phrase(const char *phrase, uint16_t *minutes)
         const char *word;
         uint16_t    minutes;
     } spellings[] = {
-        { "thirty", 30 },
-        { "twenty", 20 },
-        { "ten",    10 },
-        { "five",    5 },
-        { "two",     2 },
+        { "thirty",  30 },
+        { "twenty",  20 },
+        { "fifteen", 15 },
+        { "ten",     10 },
+        { "five",     5 },
+        { "three",    3 },
+        { "two",      2 },
         { "one",     1 },
     };
 

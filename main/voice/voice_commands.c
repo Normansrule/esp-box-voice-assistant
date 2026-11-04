@@ -39,19 +39,24 @@ static const voice_command_t s_commands[] = {
     EN(VOICE_ACTION_GREETING,          "hey there little guy"),
     EN(VOICE_ACTION_HOW_ARE_YOU,       "how are you doing"),
     EN(VOICE_ACTION_HOW_ARE_YOU,       "how are you today"),
+    EN(VOICE_ACTION_HOW_ARE_YOU,       "how are you feeling"),
     EN(VOICE_ACTION_WHAT_CAN_YOU_DO,   "what can you do"),
     EN(VOICE_ACTION_WHAT_CAN_YOU_DO,   "help me please"),
     EN(VOICE_ACTION_TELL_JOKE,         "tell me a joke"),
     EN(VOICE_ACTION_TELL_JOKE,         "make me laugh"),
+    EN(VOICE_ACTION_TELL_JOKE,         "tell me something funny"),
     EN(VOICE_ACTION_WHO_MADE_YOU,      "who made you"),
     EN(VOICE_ACTION_GOODBYE,           "goodbye buddy"),
     EN(VOICE_ACTION_GOODBYE,           "go to sleep now"),
+    EN(VOICE_ACTION_GOODBYE,           "good night buddy"),
 
     /* Things the buddy can answer from its own sensors and clock */
     EN(VOICE_ACTION_TELL_TIME,         "what time is it"),
     EN(VOICE_ACTION_TELL_TIME,         "tell me the time"),
+    EN(VOICE_ACTION_TELL_TIME,         "what is the time"),
     EN(VOICE_ACTION_TELL_DATE,         "what is the date"),
     EN(VOICE_ACTION_TELL_DATE,         "what day is it"),
+    EN(VOICE_ACTION_TELL_DATE,         "what is the date today"),
     EN(VOICE_ACTION_TELL_TEMPERATURE,  "what is the temperature"),
     EN(VOICE_ACTION_TELL_TEMPERATURE,  "how warm is it"),
     EN(VOICE_ACTION_TELL_TEMPERATURE,  "how cold is it"),
@@ -153,19 +158,35 @@ static const voice_command_t s_commands[] = {
     EN(VOICE_ACTION_TELL_FORTUNE,      "read my fortune"),
     EN(VOICE_ACTION_TELL_STORY,        "tell me a story"),
     EN(VOICE_ACTION_ENCOURAGE_ME,      "cheer me up"),
+    EN(VOICE_ACTION_ENCOURAGE_ME,      "i feel sad today"),
+
+    /*
+     * Added in v3.8 — the most likely things people say to a box with a face
+     * that it previously had to shrug at. One wording each, deliberately: the
+     * internal-RAM budget after the speech models is tight (see the self-test),
+     * and MultiNet pays for every registered phrase. Answers cost flash only.
+     */
+    EN(VOICE_ACTION_TELL_RIDDLE,       "tell me a riddle"),
+    EN(VOICE_ACTION_REPEAT_THAT,       "say that again"),
+    EN(VOICE_ACTION_NEVER_MIND,        "never mind"),
+    EN(VOICE_ACTION_WEATHER,           "what is the weather like"),
+    EN(VOICE_ACTION_FAVOURITE_THING,   "what is your favorite color"),
+    EN(VOICE_ACTION_I_AM_BORED,        "i am so bored"),
 
     /*
      * The kitchen timer.
      *
      * MultiNet only ever matches phrases registered up front, so the durations
      * have to be spelled out one at a time rather than parsed from free speech.
-     * These five cover almost every real use; voice_local_brain.c reads the
+     * These eight cover almost every real use; voice_local_brain.c reads the
      * number back out of whichever phrase matched.
      */
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for one minute"),
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for two minutes"),
+    EN(VOICE_ACTION_TIMER_SET,         "set a timer for three minutes"),
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for five minutes"),
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for ten minutes"),
+    EN(VOICE_ACTION_TIMER_SET,         "set a timer for fifteen minutes"),
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for twenty minutes"),
     EN(VOICE_ACTION_TIMER_SET,         "set a timer for thirty minutes"),
     EN(VOICE_ACTION_TIMER_CHECK,       "how long is left"),
@@ -198,8 +219,10 @@ static const voice_command_t s_commands[] = {
     EN(VOICE_ACTION_HOW_OLD_ARE_YOU,   "how old are you"),
     EN(VOICE_ACTION_ARE_YOU_A_ROBOT,   "are you a robot"),
     EN(VOICE_ACTION_THANK_YOU,         "thank you buddy"),
+    EN(VOICE_ACTION_THANK_YOU,         "thanks a lot"),
     EN(VOICE_ACTION_COMPLIMENT,        "you are the best"),
     EN(VOICE_ACTION_COMPLIMENT,        "i really like you"),
+    EN(VOICE_ACTION_COMPLIMENT,        "i love you buddy"),
     EN(VOICE_ACTION_GOOD_MORNING,      "good morning buddy"),
     EN(VOICE_ACTION_HIGH_FIVE,         "give me a high five"),
     EN(VOICE_ACTION_TELL_FACT,         "tell me a fact"),
@@ -209,6 +232,10 @@ static const voice_command_t s_commands[] = {
     /* Device control */
     EN(VOICE_ACTION_VOLUME_UP,         "turn the volume up"),
     EN(VOICE_ACTION_VOLUME_DOWN,       "turn the volume down"),
+    EN(VOICE_ACTION_VOLUME_UP,         "make it louder"),
+    EN(VOICE_ACTION_VOLUME_DOWN,       "make it quieter"),
+    EN(VOICE_ACTION_BRIGHTNESS_UP,     "make the screen brighter"),
+    EN(VOICE_ACTION_BRIGHTNESS_DOWN,   "make the screen darker"),
     EN(VOICE_ACTION_OPEN_SETTINGS,     "open the settings"),
     EN(VOICE_ACTION_OPEN_CALCULATOR,   "open the calculator"),
     EN(VOICE_ACTION_OPEN_CALCULATOR,   "let me do a sum"),
@@ -330,6 +357,12 @@ const char *voice_commands_action_title(voice_action_t action)
     case VOICE_ACTION_TELL_FORTUNE:     return "Ask for a fortune";
     case VOICE_ACTION_TELL_STORY:       return "Ask for a story";
     case VOICE_ACTION_ENCOURAGE_ME:     return "Ask to be cheered up";
+    case VOICE_ACTION_TELL_RIDDLE:      return "Ask for a riddle";
+    case VOICE_ACTION_REPEAT_THAT:      return "Hear it again";
+    case VOICE_ACTION_NEVER_MIND:       return "Change your mind";
+    case VOICE_ACTION_WEATHER:          return "Ask about the weather";
+    case VOICE_ACTION_FAVOURITE_THING:  return "Ask its favourite colour";
+    case VOICE_ACTION_I_AM_BORED:       return "Tell it you are bored";
 
     case VOICE_ACTION_TIMER_SET:        return "Set a timer";
     case VOICE_ACTION_TIMER_CHECK:      return "Check the timer";
@@ -354,6 +387,8 @@ const char *voice_commands_action_title(voice_action_t action)
     case VOICE_ACTION_VOLUME_DOWN:      return "Turn it down";
     case VOICE_ACTION_OPEN_SETTINGS:    return "Open settings";
     case VOICE_ACTION_OPEN_CALCULATOR:  return "Open the calculator";
+    case VOICE_ACTION_BRIGHTNESS_UP:    return "Brighten the screen";
+    case VOICE_ACTION_BRIGHTNESS_DOWN:  return "Dim the screen";
 
     case VOICE_ACTION_COUNT:
     case VOICE_ACTION_NONE:

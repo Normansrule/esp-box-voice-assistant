@@ -16,6 +16,7 @@
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
 #include "esp_http_client.h"
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_random.h"
 
@@ -37,7 +38,7 @@ static const char *TAG = "music";
 /* State                                                                     */
 /* ------------------------------------------------------------------------ */
 
-static char   s_track_names[BUDDY_MUSIC_MAX_TRACKS][TRACK_NAME_MAX_LEN];
+EXT_RAM_BSS_ATTR static char s_track_names[BUDDY_MUSIC_MAX_TRACKS][TRACK_NAME_MAX_LEN]; /* PSRAM: frees internal RAM (2026-11-02). */
 static size_t s_track_count;
 static size_t s_current_track;
 static char   s_now_playing[TRACK_NAME_MAX_LEN];

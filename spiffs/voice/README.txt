@@ -10,10 +10,13 @@ Re-run the script after changing any reply in voice_local_brain.c.
 08922915.mp3    8424 B  Hello there. I was hoping you would say something.
 5683e69f.mp3    6048 B  Hi! What are we up to today?
 5b489fae.mp3    3780 B  Oh hey, you are back.
+1fbd6b8a.mp3    8100 B  Hello! I was just practising my blinking.
+8e830626.mp3    9180 B  Hi. You have my full attention, which is all of it.
 091e9667.mp3    7776 B  Warm, well powered, and pleased about it.
 2e0e99c6.mp3    7560 B  Excellent. My eyes work and everything.
 b34f34db.mp3    6048 B  Pretty good for a small box on a desk.
 43df80bd.mp3    7992 B  Happy. Slightly bored. Mostly happy.
+d2a4ec8f.mp3    6264 B  Better now that someone is talking to me.
 7f418fb0.mp3   12744 B  Why did the microcontroller go to therapy? Too many unresolved interrupts.
 41ae5b60.mp3    9720 B  I would tell you a joke about UDP, but you might not get it.
 4ee0cffb.mp3   13068 B  There are ten kinds of people. Those who read binary, and those who do not.
@@ -34,6 +37,7 @@ a8dd4389.mp3   15120 B  I run on an ESP32-S3 box, and somebody at this desk taug
 33f5552a.mp3    7452 B  Night night. Poke me if you need anything.
 2c430360.mp3    9720 B  Alright, resting my eyes. Say the wake word whenever.
 843bc518.mp3    2268 B  See you soon.
+22d35ee1.mp3    6048 B  Good night. I will keep an ear out.
 889bb92b.mp3    8532 B  I have not been given one. You could pick something.
 200ecaf9.mp3   11880 B  No name yet. I answer to hi E S P, which is not the same thing.
 599cf138.mp3    9828 B  Whatever you call me, as long as you start with the wake word.
@@ -46,12 +50,17 @@ e77a0f78.mp3    6588 B  I lose track every time the power goes.
 c0a898b6.mp3    6156 B  Any time. That is the whole job.
 c8c2eb98.mp3    3240 B  You are very welcome.
 c2976173.mp3    8640 B  Happy to help. It beats sitting here blinking.
+4404bd69.mp3    3240 B  No problem at all.
+a3c66684.mp3    9072 B  My pleasure. Genuinely. I do not get out much.
 0b99bec1.mp3    7668 B  Oh. Well now I am going to be insufferable.
 e966e1cc.mp3   13500 B  That is going straight into my permanent memory. Which is small, so it counts.
 a2a55bca.mp3    3780 B  You are alright yourself.
+0a2ac678.mp3    7992 B  Stop it, my cheeks would go red if I had any.
+9275efa9.mp3    9180 B  I like you too. You are my favourite person on this desk.
 aaaea4bb.mp3    6372 B  Morning! I have been up for a while.
 7e360526.mp3    5616 B  Good morning. The desk missed you.
 160f870b.mp3    8964 B  Morning. I checked, and the temperature is fine.
+82dfa4ed.mp3    5616 B  Good morning! Ready when you are.
 e186d3e0.mp3    8208 B  I have no hands, but consider it high fived.
 18cc867f.mp3    5724 B  Up high! Imagine the sound.
 3c33b980.mp3    5832 B  That was a good one. I felt it.
@@ -64,7 +73,7 @@ f5bf6b26.mp3   18252 B  My display is three hundred and twenty pixels across. Th
 b4412e5c.mp3   18360 B  A quartz clock crystal is cut so precisely that it vibrates the same number of times every second, forever.
 a712cdd6.mp3   13824 B  The red I am drawn in is Espressif's. I did not choose it, but I have grown fond of it.
 6ed8b75c.mp3   16956 B  Flash memory forgets slowly. Left unpowered for twenty years, I might lose track of who I am.
-dbd21f67.mp3   17604 B  There is no battery in me. Every time you unplug me, I forget what time it is and have to ask the internet.
+6f79f49b.mp3    9396 B  Without a battery in my dock, unplugging me wipes my clock.
 38b2ab8e.mp3    1296 B  Rock.
 daa631d5.mp3    1404 B  Paper.
 dcc18628.mp3    1728 B  Scissors.
@@ -98,15 +107,36 @@ b21ea4cf.mp3   11232 B  You are doing better than you think. I have been watchin
 922ed19b.mp3   12312 B  Nobody else could tell how much of that was guesswork. It counts the same.
 e9b4e738.mp3   10800 B  I have a face and no hands, so trust me when I say you are ahead.
 f564b9b5.mp3   11340 B  Whatever it is, you have solved worse. I was there for some of it.
+b82b138c.mp3    7776 B  I am only a small box, but I am on your side.
 c8da7e84.mp3   25380 B  Once there was a box on a desk. It could not move, so it learned to make faces. Eventually somebody looked up, and that was enough. The end.
 805120eb.mp3   29268 B  A capacitor and a resistor walked into a circuit. The capacitor said, give it time. The resistor said, I am holding everything back. They were both right. The end.
 404fabef.mp3   28404 B  There was a clock that had never seen the sun. It asked the network what time it was, every morning, and believed the answer. It was never once wrong. The end.
+65fa24c6.mp3   10260 B  What has keys but cannot open a single lock? A keyboard.
+caa75cca.mp3    7776 B  What gets wetter the more it dries? A towel.
+aaf533b3.mp3   10584 B  What has a face and two hands but no arms? A clock.
+91e4cd96.mp3    8208 B  What can you catch but never throw? A cold.
+f1e98445.mp3    8748 B  What has to be broken before you can use it? An egg.
+c89ce5d6.mp3   13284 B  The more of them you take, the more you leave behind. What are they? Footsteps.
+d8740ca7.mp3    8640 B  What goes up but never comes down? Your age.
+137b0ec4.mp3    7884 B  What has one eye but cannot see? A needle.
+85f6bf6f.mp3    5292 B  Okay. Forgotten already.
+9e5a66b3.mp3    5508 B  No problem. I will be here.
+3d471761.mp3    2160 B  Fair enough.
+5c0a5698.mp3   12096 B  I have no window and no forecast. Ask how warm it is in here instead.
+89e9da72.mp3   13176 B  Red. Espressif red, specifically. I am biased, I am made of it.
+089516d5.mp3    8856 B  Blue. It is the colour of a Wi-Fi light that is working.
+e91a02cb.mp3   12744 B  Ask me for a riddle. Or a story. Or poke my screen and see what I do.
+770fb457.mp3    8532 B  Want to play rock paper scissors? Just say it.
+a4ef6b73.mp3   11448 B  Bored is just your brain asking for something new. Ask me for a fact.
+46dcc08e.mp3    4752 B  I have not said anything yet.
 4d4c0f85.mp3   15120 B  I have lost track of the time. Connect me to Wi-Fi in Settings and I will find a clock.
 787c7b3c.mp3    7128 B  No idea. My calendar needs Wi-Fi.
 4e49404f.mp3    9936 B  I cannot feel the room. My sensor dock is not attached.
 a55650b5.mp3    7236 B  No sensor dock, so no humidity reading.
 06c0ce94.mp3   23220 B  I have no music to play. Drop some .mp3 files into the spiffs music folder and reflash, or set a stream address in Settings.
 46528559.mp3    5184 B  There is nothing else in the playlist.
+037a1641.mp3    7236 B  I can only check the battery on the sensor dock.
+332ab7b5.mp3   13500 B  I can't find a battery in the dock. Check a cell is fitted and the switch is on.
 314d5ed6.mp3    5292 B  I am not on Wi-Fi at the moment.
 f4fe470b.mp3    2160 B  There you go!
 b0f67b88.mp3    5400 B  Okay, but only for a moment.
@@ -163,8 +193,10 @@ dd951307.mp3    2808 B  You rolled a five.
 fed712ad.mp3    2916 B  You rolled a six.
 dbbb6dd7.mp3    4212 B  Timer set for one minute.
 4e6e12a4.mp3    4428 B  Timer set for two minutes.
+0a0d7fca.mp3    4536 B  Timer set for three minutes.
 bf839684.mp3    4752 B  Timer set for five minutes.
 a1c6a647.mp3    4644 B  Timer set for ten minutes.
+b9b14b8d.mp3    5184 B  Timer set for fifteen minutes.
 9ca7c4b3.mp3    5184 B  Timer set for twenty minutes.
 d1566098.mp3    4860 B  Timer set for thirty minutes.
 ec4f90f0.mp3    2052 B  Timer set.
@@ -181,11 +213,13 @@ d9c48407.mp3    8640 B  Missed that. Tap the gear for every phrase I know.
 60c1b761.mp3   14256 B  I only know set phrases, and that was not one of them. Try, what can you do.
 665fe789.mp3    9072 B  No idea what that was. Ask me for a joke instead.
 6dd71ecf.mp3   11232 B  Not one of mine. Say, what can you do, and I will show you.
+90d02158.mp3   10044 B  Sorry, I did not get that. Try saying it a little slower.
 0441b098.mp3    1728 B  Listening...
 3e79cd1c.mp3    3888 B  I did not hear anything.
 1795b591.mp3    1836 B  Thinking...
 cdc66c96.mp3    5184 B  I am still busy with the last one.
 f49b06e4.mp3    2916 B  Your timer is up.
+5486584d.mp3    7452 B  That took too long. I am listening again.
 8b6fe763.mp3    1404 B  zero
 ba2719ef.mp3    1296 B  one
 be248829.mp3     972 B  two
@@ -323,6 +357,8 @@ f7fa3daf.mp3    1512 B  minus
 2c85449c.mp3    1728 B  percent.
 6a7ff5a1.mp3    2700 B  Volume up to
 86002ee2.mp3    3024 B  Volume down to
+40d1a478.mp3    2808 B  Brightness up to
+726af387.mp3    3024 B  Brightness down to
 58e096de.mp3    1512 B  About
 568cba94.mp3    2160 B  minute left.
 a480ebcb.mp3    2484 B  minutes left.

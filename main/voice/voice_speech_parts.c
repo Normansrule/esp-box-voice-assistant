@@ -49,6 +49,9 @@ const char *const VOICE_FRAGMENT_PERCENT     = "percent.";
 const char *const VOICE_FRAGMENT_VOLUME_UP_TO   = "Volume up to";
 const char *const VOICE_FRAGMENT_VOLUME_DOWN_TO = "Volume down to";
 
+const char *const VOICE_FRAGMENT_BRIGHTNESS_UP_TO   = "Brightness up to";
+const char *const VOICE_FRAGMENT_BRIGHTNESS_DOWN_TO = "Brightness down to";
+
 const char *const VOICE_FRAGMENT_ABOUT         = "About";
 const char *const VOICE_FRAGMENT_MINUTE_LEFT   = "minute left.";
 const char *const VOICE_FRAGMENT_MINUTES_LEFT  = "minutes left.";
@@ -102,6 +105,7 @@ static const char *const s_all_fragments[] = {
     "minus", "degrees Fahrenheit", "degrees Celsius", "in here.",
     "Humidity is", "percent.",
     "Volume up to", "Volume down to",
+    "Brightness up to", "Brightness down to",
     "About", "minute left.", "minutes left.", "second left.", "seconds left.",
     "minutes and",
     "That's", "hundred", "thousand", "point", "The answer is",

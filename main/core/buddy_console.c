@@ -21,6 +21,7 @@
 #include "freertos/task.h"
 
 #include "esp_heap_caps.h"
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
@@ -191,8 +192,9 @@ static void command_status(const char *argument)
     print_json_string(hw_imu_chip_name());
     const hw_battery_reading_t battery = hw_battery_read();
     if (battery.available) {
-        printf(",\"battery_mv\":%u,\"battery_pct_est\":%u",
-               (unsigned)battery.battery_mv, (unsigned)battery.percent_est);
+        printf(",\"battery_mv\":%u,\"battery_cell\":%s,\"battery_pct_est\":%u",
+               (unsigned)battery.battery_mv, battery.cell_detected ? "true" : "false",
+               (unsigned)battery.percent_est);
     }
     end_reply();
 }
@@ -259,16 +261,17 @@ static void command_battery(const char *argument)
         return;
     }
     begin_reply("battery", true);
-    printf(",\"pin_mv\":%u,\"battery_mv\":%u,\"percent_est\":%u,\"low\":%s"
+    printf(",\"pin_mv\":%u,\"battery_mv\":%u,\"cell_detected\":%s,\"percent_est\":%u,\"low\":%s"
            ",\"note\":\"percent is estimated from voltage; charging is not visible to the ESP32\"",
-           (unsigned)b.pin_mv, (unsigned)b.battery_mv, (unsigned)b.percent_est, b.low ? "true" : "false");
+           (unsigned)b.pin_mv, (unsigned)b.battery_mv, b.cell_detected ? "true" : "false",
+           (unsigned)b.percent_est, b.low ? "true" : "false");
     end_reply();
 }
 
 static void command_selftest(const char *argument)
 {
     (void)argument;
-    static buddy_selftest_report_t report;   /* ~1.5 KB; kept off the stack. */
+    EXT_RAM_BSS_ATTR static buddy_selftest_report_t report;   /* ~1.5 KB; off the stack, in PSRAM. */
     static const char *result_names[] = { "pass", "warn", "fail" };
 
     buddy_selftest_run(&report);

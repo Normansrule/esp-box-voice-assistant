@@ -82,8 +82,22 @@ esp_err_t hw_display_init(void)
         hw_display_unlock();
     }
 
-    ESP_LOGI(TAG, "Display ready (%dx%d)", BSP_LCD_H_RES, BSP_LCD_V_RES);
+    /*
+     * Touch is optional. The BSP (patched copy in components/espressif__esp-box-3)
+     * now returns the display even when the touch controller fails, so a bad or
+     * missing touch panel costs touch input, not the whole boot.
+     */
+    if (hw_display_has_touch()) {
+        ESP_LOGI(TAG, "Display ready (%dx%d), touch ready", BSP_LCD_H_RES, BSP_LCD_V_RES);
+    } else {
+        ESP_LOGW(TAG, "Display ready (%dx%d), touch UNAVAILABLE", BSP_LCD_H_RES, BSP_LCD_V_RES);
+    }
     return ESP_OK;
+}
+
+bool hw_display_has_touch(void)
+{
+    return bsp_display_get_input_dev() != NULL;
 }
 
 bool hw_display_lock(uint32_t timeout_ms)

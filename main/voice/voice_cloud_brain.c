@@ -501,7 +501,7 @@ static size_t describe_the_box(char *out, size_t out_size)
     }
 
     const hw_battery_reading_t battery = hw_battery_read();
-    if (battery.available) {
+    if (battery.available && battery.cell_detected) {
         context.have_battery = true;
         context.battery_percent_estimate = battery.percent_est;
         context.battery_low = battery.low;

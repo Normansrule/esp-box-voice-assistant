@@ -120,11 +120,16 @@ static void start_networking(void)
 
 /**
  * @brief Log how much memory is left, which is the number that matters most.
+ *
+ * Called after each boot stage as well as at the end, so one boot log shows
+ * which stage eats internal RAM (the scarce one) instead of only the total.
  */
-static void log_memory_summary(void)
+static void log_memory_summary(const char *stage)
 {
-    ESP_LOGI(TAG, "Free memory: %u bytes internal, %u bytes PSRAM",
+    ESP_LOGI(TAG, "Free memory after %s: %u bytes internal (largest block %u), %u bytes PSRAM",
+             stage,
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
 }
 
@@ -135,12 +140,14 @@ void app_main(void)
 
     /* --- 1. Storage ---------------------------------------------------- */
     initialise_storage();
+    log_memory_summary("storage");
 
     /* --- 2. Board ------------------------------------------------------ */
     ESP_ERROR_CHECK(bsp_i2c_init());
 
     /* --- 3. Screen (still dark) ---------------------------------------- */
     ESP_ERROR_CHECK(hw_display_init());
+    log_memory_summary("display");
 
     /*
      * bsp_board_init() sets up the audio codec, the buttons and the sensor
@@ -148,16 +155,19 @@ void app_main(void)
      * display's initialisation is what brings that bus fully up.
      */
     ESP_ERROR_CHECK(bsp_board_init());
+    log_memory_summary("board");
 
     hw_sensors_init();          /* Not fatal: a bare box simply has no readout. */
     hw_battery_init();          /* Not fatal: needs the SENSOR dock to mean anything. */
     hw_imu_init();              /* Not fatal: the face just will not follow a lean. */
     hw_microphone_init();
     hw_buttons_init();
+    log_memory_summary("sensors, IMU, mic, buttons");
 
     /* --- 4. Face, then light --------------------------------------------- */
     ESP_ERROR_CHECK(ui_screen_face_create());
     buddy_motion_start();       /* Tilt, shake and battery, now there is a face. */
+    log_memory_summary("face and motion");
 
     /* A beat so the first frame is fully drawn before anyone sees it. */
     vTaskDelay(pdMS_TO_TICKS(120));
@@ -171,6 +181,7 @@ void app_main(void)
     audio_prompts_init();
     audio_voice_init();
     audio_music_init();
+    log_memory_summary("audio");
 
     /*
      * The countdown badge is a UI object, so it can only be wired to the timer
@@ -181,6 +192,7 @@ void app_main(void)
 
     /* --- 6. Network (in the background) ---------------------------------- */
     start_networking();
+    log_memory_summary("networking");
 
     /* --- 7. Voice -------------------------------------------------------- */
     /*
@@ -189,6 +201,7 @@ void app_main(void)
      */
     ESP_LOGI(TAG, "Loading the speech models...");
     const esp_err_t voice_err = voice_assistant_start();
+    log_memory_summary("speech models");
 
     if (voice_err != ESP_OK) {
         ESP_LOGE(TAG, "Voice did not start: %s", esp_err_to_name(voice_err));
@@ -226,6 +239,6 @@ void app_main(void)
      */
     buddy_console_start();
 
-    log_memory_summary();
+    log_memory_summary("self test and console");
     ESP_LOGI(TAG, "Ready. Say \"Hi E.S.P.\" to start talking.");
 }

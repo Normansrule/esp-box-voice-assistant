@@ -1,0 +1,25 @@
+menu "Desk Buddy appearance"
+
+    choice BUDDY_THEME
+        prompt "Screen theme"
+        default BUDDY_THEME_PAPER
+        help
+            The colours the face and its widgets are drawn with.
+            Paper is warm off-white for daytime. Ember is warm near-black
+            with a brighter face, for a desk at night. Palettes and their
+            contrast checks are in main/face/face_theme.h and docs/DESIGN.md.
+
+        config BUDDY_THEME_PAPER
+            bool "Paper (day)"
+        config BUDDY_THEME_EMBER
+            bool "Ember (night)"
+    endchoice
+
+    config BUDDY_UI_REDUCED_MOTION
+        bool "Reduce interface motion"
+        default n
+        help
+            Captions appear and disappear without sliding or fading.
+            The face itself still blinks and changes expression.
+
+endmenu

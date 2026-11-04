@@ -55,7 +55,19 @@ esp_err_t ui_timer_badge_create(lv_obj_t *parent)
     s_label = lv_label_create(s_badge);
     lv_obj_set_style_text_font(s_label, &lv_font_montserrat_14, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
+    lv_obj_set_style_text_align(s_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_label_set_text(s_label, "0:00");
+
+    /*
+     * Montserrat's digits are not all the same width, so a countdown in a
+     * content-sized pill makes the pill twitch every second ("1:11" is
+     * narrower than "0:00"). Reserving the width of the widest m:ss clock
+     * keeps it still. Measured once here; costs no memory.
+     */
+    lv_point_t widest;
+    lv_txt_get_size(&widest, "00:00", &lv_font_montserrat_14, 0, 0,
+                    LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+    lv_obj_set_style_min_width(s_label, widest.x + 2, LV_PART_MAIN);
 
     lv_obj_add_flag(s_badge, LV_OBJ_FLAG_HIDDEN);
 
@@ -89,10 +101,17 @@ void ui_timer_badge_update(uint32_t seconds_left, bool running)
     buddy_timer_format_clock(seconds_left, clock, sizeof(clock));
     lv_label_set_text(s_label, clock);
 
+    /*
+     * The last stretch fills the pill with the accent instead of only
+     * tinting the digits: a change of shape-and-fill reads from across the
+     * desk, where a change of text colour does not.
+     */
+    const bool urgent = (seconds_left <= URGENT_BELOW_SECONDS);
+    lv_obj_set_style_bg_color(s_badge,
+                              urgent ? FACE_COLOR_ACCENT : FACE_COLOR_SURFACE,
+                              LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label,
-                                (seconds_left <= URGENT_BELOW_SECONDS)
-                                    ? FACE_COLOR_ESPRESSIF_RED
-                                    : FACE_COLOR_TEXT_MUTED,
+                                urgent ? FACE_COLOR_ON_ACCENT : FACE_COLOR_TEXT_MUTED,
                                 LV_PART_MAIN);
 
     lv_obj_clear_flag(s_badge, LV_OBJ_FLAG_HIDDEN);

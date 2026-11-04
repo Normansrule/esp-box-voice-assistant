@@ -146,14 +146,14 @@
       const x = G.BUDDY_SCREEN_WIDTH - EDGE - w, y = EDGE;
       this.pill(ctx, x, y, w, h, 12, T.surface);
       ctx.textBaseline = "middle";
-      ctx.fillStyle = T.espressif_red;
+      ctx.fillStyle = (T.accent || T.espressif_red);
       ctx.fillText(a, x + 9, y + h / 2 + 1);
       ctx.fillStyle = T.text_muted;
       ctx.fillText(b, x + 9 + wa + 8, y + h / 2 + 1);
       if (bt) {
         /* Battery glyph (LV_SYMBOL_BATTERY_*) and the "~NN%" estimate. */
         const bx = x + 9 + wa + 8 + wb + 8, by = y + 8;
-        const col = bt.low ? T.espressif_red : T.text_muted;
+        const col = bt.low ? (T.accent || T.espressif_red) : T.text_muted;
         ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 1.4;
         ctx.strokeRect(bx + 0.5, by + 0.5, 15, 9);
         ctx.fillRect(bx + 16, by + 3, 2, 4);
@@ -166,10 +166,10 @@
       const b = this.bubble;
       const x = G.BUDDY_SCREEN_WIDTH - EDGE - b.w;
       const y = G.BUDDY_SCREEN_HEIGHT - EDGE - b.h;
-      this.pill(ctx, x, y, b.w, b.h, 16, T.surface, T.surface_border);
+      this.pill(ctx, x, y, b.w, b.h, 14, T.surface, T.surface_border);
       ctx.font = `500 ${b.size}px Montserrat, Inter, sans-serif`;
       ctx.textBaseline = "top";
-      ctx.fillStyle = b.source === "buddy" ? T.espressif_red : b.source === "user" ? T.text : T.text_muted;
+      ctx.fillStyle = b.source === "buddy" ? (T.accent || T.espressif_red) : b.source === "user" ? T.text : T.text_muted;
       b.lines.forEach((l, i) => ctx.fillText(l, x + BUBBLE_PAD, y + BUBBLE_PAD + i * b.lineH + 1));
     }
   }

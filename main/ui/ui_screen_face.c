@@ -55,9 +55,16 @@ esp_err_t ui_screen_face_create(void)
         return ESP_ERR_TIMEOUT;
     }
 
+    /*
+     * Point LVGL's own widget theme (keyboard, sliders, dropdowns) at the
+     * active palette before anything is built, so the settings pages and the
+     * home screen agree on one accent and on light or dark.
+     */
+    face_theme_apply_lvgl();
+
     lv_obj_t *screen = lv_scr_act();
 
-    /* A clean white field. The face is the only thing with any colour on it. */
+    /* A plain field in the theme's background. The face carries the colour. */
     lv_obj_set_style_bg_color(screen, FACE_COLOR_BACKGROUND, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(screen, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_pad_all(screen, 0, LV_PART_MAIN);

@@ -41,10 +41,13 @@ extern "C" {
 
 typedef struct {
     bool     available;      /*!< false without the sensor dock or the ADC  */
+    bool     cell_detected;  /*!< false when the reading is too low to be a cell
+                                  (empty holder, dock switched off, or a cell
+                                  drained past its protection cut-off)      */
     uint16_t pin_mv;         /*!< calibrated voltage at IO10                */
     uint16_t battery_mv;     /*!< pin_mv x 4.01                             */
-    uint8_t  percent_est;    /*!< ESTIMATE from the resting voltage curve   */
-    bool     low;            /*!< below BUDDY_BATTERY_LOW_MV                */
+    uint8_t  percent_est;    /*!< ESTIMATE; 0 when no cell is detected      */
+    bool     low;            /*!< below BUDDY_BATTERY_LOW_MV, cell detected */
 } hw_battery_reading_t;
 
 /** Set up ADC1 channel 9 with calibration. Only meaningful with the SENSOR dock. */

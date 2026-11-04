@@ -15,6 +15,7 @@
 
 #include "buddy_config.h"
 #include "hw_microphone.h"
+#include "hw_speaker.h"
 
 static const char *TAG = "hw_mic";
 
@@ -33,9 +34,9 @@ esp_err_t hw_microphone_init(void)
      * make sure the format matches what the speech models expect, in case a
      * previous playback left it at some other rate.
      */
-    esp_err_t err = bsp_codec_set_fs(BUDDY_AUDIO_SAMPLE_RATE_HZ,
-                                     BUDDY_AUDIO_BITS_PER_SAMPLE,
-                                     I2S_SLOT_MODE_STEREO);
+    esp_err_t err = hw_speaker_set_codec_format(BUDDY_AUDIO_SAMPLE_RATE_HZ,
+                                                BUDDY_AUDIO_BITS_PER_SAMPLE,
+                                                I2S_SLOT_MODE_STEREO, true);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Could not set the capture format: %s", esp_err_to_name(err));
         return err;

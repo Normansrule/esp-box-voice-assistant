@@ -164,11 +164,26 @@ typedef enum {
     VOICE_ACTION_TELL_STORY,        /*!< "tell me a story"                    */
     VOICE_ACTION_ENCOURAGE_ME,      /*!< "cheer me up"                        */
 
+    /*
+     * Added in v3.8: the things people say to a talking box that it had no
+     * answer for. Every reply is a fixed sentence, so all of them are spoken
+     * offline. Answers live in flash; the only RAM cost is MultiNet's own
+     * per-phrase table, which is why each of these has just one wording.
+     */
+    VOICE_ACTION_TELL_RIDDLE,       /*!< "tell me a riddle"                   */
+    VOICE_ACTION_REPEAT_THAT,       /*!< "say that again"                     */
+    VOICE_ACTION_NEVER_MIND,        /*!< "never mind"                         */
+    VOICE_ACTION_WEATHER,           /*!< "what is the weather like"           */
+    VOICE_ACTION_FAVOURITE_THING,   /*!< "what is your favorite color"        */
+    VOICE_ACTION_I_AM_BORED,        /*!< "i am so bored"                      */
+
     /* Device control */
     VOICE_ACTION_VOLUME_UP,
     VOICE_ACTION_VOLUME_DOWN,
     VOICE_ACTION_OPEN_SETTINGS,
     VOICE_ACTION_OPEN_CALCULATOR,   /*!< "open the calculator"                */
+    VOICE_ACTION_BRIGHTNESS_UP,     /*!< "make the screen brighter"           */
+    VOICE_ACTION_BRIGHTNESS_DOWN,   /*!< "make the screen darker"             */
 
     VOICE_ACTION_COUNT,
     VOICE_ACTION_NONE,              /*!< Nothing matched                      */

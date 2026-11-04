@@ -53,6 +53,39 @@ static volatile bool         s_zero_requested = true;   /* zero once settled */
 static volatile bool         s_stream;
 static volatile uint16_t     s_stream_every = 5;
 
+/*
+ * Scale factors for the ranges set in hw_imu_init() (ACCE_FS_4G, GYRO_FS_500DPS).
+ *
+ * We convert raw counts ourselves instead of calling icm42670_get_acce_value()
+ * / icm42670_get_gyro_value(). In espressif/icm42670 1.0.0 those work out the
+ * range by reading the wrong bits of ACCEL_CONFIG0 (bits 4:3 instead of 6:5,
+ * and the gyro version reads the accel register). With our 4 g / 100 Hz setup
+ * that picks the 8 g scale, so every reading came out doubled: about 1.96 g at
+ * rest on the desk (seen on device 2026-11-03), which kept tripping the
+ * shake detector. Keep these in step with the config in hw_imu_init().
+ */
+#define ACCE_COUNTS_PER_G      8192.0f   /* +/-4 g    */
+#define GYRO_COUNTS_PER_DPS    65.5f     /* +/-500 dps */
+
+static esp_err_t read_scaled(icm42670_value_t *accel, icm42670_value_t *gyro)
+{
+    icm42670_raw_value_t ra, rw;
+    esp_err_t err = icm42670_get_acce_raw_value(s_imu, &ra);
+    if (err == ESP_OK) {
+        err = icm42670_get_gyro_raw_value(s_imu, &rw);
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+    accel->x = ra.x / ACCE_COUNTS_PER_G;
+    accel->y = ra.y / ACCE_COUNTS_PER_G;
+    accel->z = ra.z / ACCE_COUNTS_PER_G;
+    gyro->x  = rw.x / GYRO_COUNTS_PER_DPS;
+    gyro->y  = rw.y / GYRO_COUNTS_PER_DPS;
+    gyro->z  = rw.z / GYRO_COUNTS_PER_DPS;
+    return ESP_OK;
+}
+
 /* Gravity direction at rest, as a unit vector. */
 static float s_rest[3] = { 0.0f, 0.0f, 1.0f };
 
@@ -159,8 +192,7 @@ static void imu_task(void *argument)
         vTaskDelayUntil(&wake, period);
 
         icm42670_value_t a, w;
-        if (icm42670_get_acce_value(s_imu, &a) != ESP_OK ||
-            icm42670_get_gyro_value(s_imu, &w) != ESP_OK) {
+        if (read_scaled(&a, &w) != ESP_OK) {
             if ((++read_errors % 50) == 1) {
                 ESP_LOGW(TAG, "Read failed (%lu so far)", (unsigned long)read_errors);
             }
@@ -184,6 +216,20 @@ static void imu_task(void *argument)
             if (++settle_count >= BUDDY_IMU_RATE_HZ / 2) {
                 const float n = sqrtf(settle_sum[0] * settle_sum[0] + settle_sum[1] * settle_sum[1] +
                                       settle_sum[2] * settle_sum[2]);
+                /*
+                 * At rest the only acceleration is gravity, so the average
+                 * magnitude must be close to 1 g. Anything else means the
+                 * scale is wrong (the 2x driver bug above read 1.96 g) and
+                 * every gesture threshold will misfire, so say so loudly.
+                 */
+                const float rest_g = n / (float)settle_count;
+                if (rest_g < 0.85f || rest_g > 1.15f) {
+                    ESP_LOGW(TAG, "At rest the sensor reads %.2f g, not about 1 g: the "
+                                  "accelerometer scale is wrong, gestures will misfire",
+                             rest_g);
+                } else {
+                    ESP_LOGI(TAG, "At rest: %.2f g (scale looks right)", rest_g);
+                }
                 if (n > 0.1f) {
                     s_rest[0] = settle_sum[0] / n;
                     s_rest[1] = settle_sum[1] / n;
@@ -225,7 +271,13 @@ static void imu_task(void *argument)
 
         /* --- Shake: count rising edges of |a| - 1 g above the threshold. --- */
         const float jolt = fabsf(sqrtf(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]) - 1.0f);
-        const bool now_above = jolt > BUDDY_IMU_SHAKE_G;
+        /*
+         * Hysteresis: a jolt only counts once the reading has dropped back
+         * below half the threshold. Without it, sensor noise sitting right at
+         * the threshold makes a burst of "rising edges" out of one bump.
+         */
+        const bool now_above = above ? (jolt > BUDDY_IMU_SHAKE_G * 0.5f)
+                                     : (jolt > BUDDY_IMU_SHAKE_G);
         if (now_above && !above && now_us > refractory_until_us) {
             if (peak_count < (int)(sizeof(peaks_us) / sizeof(peaks_us[0]))) {
                 peaks_us[peak_count++] = now_us;

@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ESP-BOX Voice</title>
 <meta name="description" content="An offline-first voice assistant with a face, for the ESP32-S3-BOX-3. Interactive simulator of the Desk Buddy firmware UI.">
-<meta name="theme-color" content="#E8362D">
+<meta name="theme-color" content="#F6F3EE">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;650;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Montserrat:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=9">
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -42,9 +42,7 @@
 
 <header class="hero product" id="top">
   <div class="wrap hero-head">
-    <p class="eyebrow fade-up">ESP32-S3-BOX-3 &middot; Desk Buddy firmware <span data-fw="version"></span></p>
-    <h1 class="display"><span>Hi</span> <span class="grad">E.S.P.</span></h1>
-    <p class="sub fade-up">A voice assistant with a face. It hears its wake word on the chip, answers <span data-count="commands"></span> phrases offline, and only asks the cloud when you let it.</p>
+    <h1 class="display"><span>Hi</span> <span class="red">E.S.P.</span></h1>
   </div>
   <div class="stage product-stage" id="hero-stage">
     <div class="fallback-device"><canvas id="hero-fallback" width="640" height="480" aria-hidden="true"></canvas></div>
@@ -55,20 +53,20 @@
     </div>
   </div>
   <div class="wrap hero-foot">
+    <p class="sub hero-sub fade-up">A voice assistant with a face. It hears its wake word on the chip, answers <span data-count="commands"></span> phrases offline, and only asks the cloud when you let it.</p>
     <div class="btns fade-up">
       <a class="btn btn-red" href="#buy">Get the hardware</a>
       <a class="btn btn-ghost" href="connect/">Install in your browser</a>
       <a class="btn btn-ghost" href="#simulator">Try the simulator</a>
       <a class="btn btn-ghost" href="https://github.com/Normansrule/esp-box-voice-assistant">View the code</a>
     </div>
-    <p class="stage-note">Illustration of the ESP32-S3-BOX-3 in its BOX-3-DOCK. The screen is a live browser simulation of the firmware, replaying real offline replies. Drag to turn, click to poke.</p>
   </div>
+  <p class="stage-note hero-note">Illustration of the ESP32-S3-BOX-3 in its BOX-3-DOCK. The screen is a live browser simulation of the firmware, replaying real offline replies. Drag to turn, click to poke.</p>
 </header>
 
 <section id="faces" class="morph" aria-label="Expressions">
   <div class="morph-sticky wrap">
     <div class="morph-copy">
-      <p class="eyebrow">No bitmaps. Just numbers.</p>
       <h2 class="headline"><span data-count="emotions"></span> faces from <br>21 numbers.</h2>
       <p class="sub">Every expression is one row in <code>face_emotions.c</code>. Moving between two is arithmetic, so one tween animates them all.</p>
       <div class="pose-table" id="pose-table" aria-live="off"></div>
@@ -84,8 +82,7 @@
 <section id="listen" class="night pad">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">How it listens</p>
-      <h2 class="headline">Wake. Listen.<br><span class="grad">Answer.</span></h2>
+      <h2 class="headline">Wake. Listen.<br><span class="red">Answer.</span></h2>
       <p class="sub">Each stage below is a real branch in <code>voice_assistant.c</code>, drawn with the face the firmware shows at that moment. Click one to play it in the simulator.</p>
     </div>
     <div class="pipeline" id="pipeline"></div>
@@ -99,7 +96,6 @@
 <section id="simulator" class="pad">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">Interactive simulator</p>
       <h2 class="headline">Talk to it.</h2>
       <p class="sub">Press the wake button, pick a phrase, and the buddy answers with its real reply table and its real offline voice clips. Tap the screen to poke it. Tap the gear for Settings.</p>
     </div>
@@ -195,8 +191,7 @@
 <section id="buy" class="pad buy">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">Build your own</p>
-      <h2 class="headline">Get the hardware.<br><span class="grad">Flash the face.</span></h2>
+      <h2 class="headline">Get the hardware.<br><span class="red">Flash the face.</span></h2>
       <p class="sub">Everything on this page runs on one off-the-shelf Espressif kit. No soldering, no custom board.</p>
     </div>
     <div class="kits" id="kits"></div>
@@ -213,7 +208,6 @@
 <section id="inside" class="pad inside">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">Inside the box</p>
       <h2 class="headline">What the BOX-3<br>is made of.</h2>
       <p class="sub">Tap a part. Every fact here comes from Espressif's BSP or schematics, and says where.</p>
     </div>
@@ -224,7 +218,6 @@
 <section class="pad" style="padding-top:0">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">Offline first</p>
       <h2 class="headline">It works with the<br>Wi-Fi unplugged.</h2>
     </div>
     <div class="stats" id="stats"></div>
@@ -234,7 +227,6 @@
 <section id="status" class="pad" style="padding-top:0">
   <div class="wrap">
     <div class="center reveal">
-      <p class="eyebrow">Honest status</p>
       <h2 class="headline">What is real, and what is next.</h2>
       <p class="sub">Labels follow the project's rule: nothing is called tested on hardware without logs to show for it.</p>
     </div>
@@ -257,7 +249,6 @@
     </div>
 
     <div class="center reveal" style="margin-top:110px">
-      <p class="eyebrow">Build it</p>
       <h2 class="headline">Four commands.</h2>
       <p class="sub">From an <b>ESP-IDF 5.5 CMD</b> window. Not v6: it removed the I2C driver the sensor dock uses.</p>
     </div>
@@ -279,7 +270,7 @@
 
 <script src="assets/firmware-data.js?v=8"></script>
 <script src="assets/face.js?v=8"></script>
-<script src="assets/sim.js?v=8"></script>
+<script src="assets/sim.js?v=9"></script>
 <script src="assets/shop.js?v=8"></script>
 <script src="assets/parts.js?v=8"></script>
 <script type="module" src="assets/device3d.js?v=8"></script>

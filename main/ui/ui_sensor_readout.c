@@ -79,7 +79,11 @@ void ui_sensor_readout_refresh(void)
      * part - see hw_battery.h for why the percentage is only a guess.
      */
     const hw_battery_reading_t battery = hw_battery_read();
-    if (battery.available) {
+    if (battery.available && !battery.cell_detected) {
+        lv_label_set_text(s_battery_label, LV_SYMBOL_BATTERY_EMPTY " no cell");
+        lv_obj_set_style_text_color(s_battery_label, FACE_COLOR_TEXT_MUTED, LV_PART_MAIN);
+        lv_obj_clear_flag(s_battery_label, LV_OBJ_FLAG_HIDDEN);
+    } else if (battery.available) {
         const char *symbol = (battery.percent_est >= 80) ? LV_SYMBOL_BATTERY_FULL
                            : (battery.percent_est >= 55) ? LV_SYMBOL_BATTERY_3
                            : (battery.percent_est >= 30) ? LV_SYMBOL_BATTERY_2

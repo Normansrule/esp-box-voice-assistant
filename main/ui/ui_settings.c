@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_system.h"
 
@@ -594,8 +595,9 @@ static void diagnostics_row_cb(lv_event_t *event)
      * Safe as statics because LVGL callbacks all run on that one task, so there
      * is never a second one in flight.
      */
-    static buddy_selftest_report_t report;
-    static char body[BUDDY_SELFTEST_MAX_CHECKS *
+    /* Both live in PSRAM: only ever touched by the CPU, never by DMA (2026-11-02). */
+    EXT_RAM_BSS_ATTR static buddy_selftest_report_t report;
+    EXT_RAM_BSS_ATTR static char body[BUDDY_SELFTEST_MAX_CHECKS *
                      (BUDDY_CHECK_NAME_MAX_LEN + BUDDY_CHECK_DETAIL_MAX_LEN)];
 
     buddy_selftest_run(&report);
@@ -1405,7 +1407,10 @@ static void build_main_page(void)
     {
         const hw_battery_reading_t battery = hw_battery_read();
         char value[40];
-        if (battery.available) {
+        if (battery.available && !battery.cell_detected) {
+            snprintf(value, sizeof(value), "No cell detected (%u.%02u V)",
+                     (unsigned)(battery.battery_mv / 1000), (unsigned)((battery.battery_mv % 1000) / 10));
+        } else if (battery.available) {
             snprintf(value, sizeof(value), "%u.%02u V, ~%u%%",
                      (unsigned)(battery.battery_mv / 1000), (unsigned)((battery.battery_mv % 1000) / 10),
                      (unsigned)battery.percent_est);

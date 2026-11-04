@@ -140,6 +140,9 @@ extern const char *const VOICE_FRAGMENT_PERCENT;
 extern const char *const VOICE_FRAGMENT_VOLUME_UP_TO;
 extern const char *const VOICE_FRAGMENT_VOLUME_DOWN_TO;
 
+extern const char *const VOICE_FRAGMENT_BRIGHTNESS_UP_TO;
+extern const char *const VOICE_FRAGMENT_BRIGHTNESS_DOWN_TO;
+
 extern const char *const VOICE_FRAGMENT_ABOUT;
 extern const char *const VOICE_FRAGMENT_MINUTE_LEFT;
 extern const char *const VOICE_FRAGMENT_MINUTES_LEFT;

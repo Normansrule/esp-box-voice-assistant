@@ -170,9 +170,12 @@ It ships **off**. To use it, put a project-scoped key with a low monthly limit i
 | Host unit tests | Runs in CI | `.github/workflows/ci.yml` |
 | Battery voltage on BOX-3-SENSOR (GPIO10, ÷4.01), ~percent estimate, low warning | In firmware, **untested on device** | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
 | Motion: eyes follow tilt, shake → dizzy, pick up → surprised (ICM-42607-P) | In firmware, **untested on device** | `hw_imu.c`, `buddy_motion.c`. [Test it](docs/HARDWARE_TESTS.md) |
+| Screen themes: Paper (day) and Ember (night), caption fade, steady timer pill | In firmware, **untested on device** | `face_theme.c`; pick one in `idf.py menuconfig` → Desk Buddy appearance. [docs/DESIGN.md](docs/DESIGN.md) |
 | Web simulator | **Simulation** | browser only, never device data |
 
 Roadmap and hardware rules: [docs/ROADMAP.md](docs/ROADMAP.md).
+
+Look and feel: [docs/DESIGN.md](docs/DESIGN.md) (Paper and Ember themes, palette, contrast checks, motion rules).
 
 ## Repository layout
 
