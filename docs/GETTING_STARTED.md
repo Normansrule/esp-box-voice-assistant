@@ -1,4 +1,18 @@
-# Getting started: flash it, change it, keep it safe
+<h1 align="center">Getting started</h1>
+<p align="center"><b>Flash it, change it, keep it safe.</b><br>
+From an empty computer to your own code running on an ESP32-S3-BOX-3.</p>
+
+<p align="center">
+  <img alt="Windows" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1f1f1f?style=flat-square">
+  <img alt="macOS" src="https://img.shields.io/badge/macOS-12%2B-1f1f1f?style=flat-square">
+  <img alt="Linux" src="https://img.shields.io/badge/Linux-Ubuntu%20%7C%20Fedora%20%7C%20Arch-1f1f1f?style=flat-square">
+  <img alt="ESP-IDF v5.5.5" src="https://img.shields.io/badge/ESP--IDF-v5.5.5-E8362D?style=flat-square">
+</p>
+
+> **Quick start, if you have done this before:** install ESP-IDF **v5.5.5**,
+> clone into a path **without spaces**, then
+> `idf.py set-target esp32s3 && idf.py build && idf.py -p <port> flash monitor`.
+> Turn on the secret check with `git config core.hooksPath .githooks`.
 
 This guide takes you from "I have never programmed a microcontroller" to
 "I changed the code and it is running on my box", on **Windows, macOS or
