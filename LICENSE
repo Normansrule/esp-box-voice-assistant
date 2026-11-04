@@ -26,6 +26,9 @@ For more information, please refer to <https://unlicense.org>
 -----------------------------------------------------------------------
 Scope: everything in this repository EXCEPT components/bsp/, which is
 derived from espressif/esp-box and licensed under Apache-2.0 (see
-components/bsp/LICENSE), and the managed components downloaded at build
-time, which keep their own licenses. Source files are marked
+components/bsp/LICENSE); components/espressif__esp-box-3/, a modified
+copy of Espressif's esp-box-3 BSP 1.1.3 licensed under Apache-2.0 (see
+components/espressif__esp-box-3/LICENSE and DESK_BUDDY_PATCHES.md); and
+the managed components downloaded at build time, which keep their own
+licenses (see THIRD_PARTY_NOTICES.md). Source files are marked
 "SPDX-License-Identifier: Unlicense OR CC0-1.0"; you may use either.

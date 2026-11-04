@@ -1,22 +1,44 @@
 # ESP-IDF build output and generated config
 build/
 build_*/
+build-*/
 sdkconfig
 sdkconfig.old
+# Per-machine config variants (sdkconfig.debug, sdkconfig.esp32s3, ...).
+# The checked-in defaults stay tracked.
+sdkconfig.*
+!sdkconfig.defaults
+!sdkconfig.defaults.*
 managed_components/
+dependencies.lock.bak
+# Loose firmware images (a storage.bin you built can contain your API key)
+/*.bin
+*.elf
+*.map
 
 # Site build
 _site/
 firmware_release/
 
-# SECRETS: never commit these
+# SECRETS: never commit these. scripts/check_secrets.py enforces the same list.
 spiffs/openai_key.txt
+spiffs/*_key.txt
+!spiffs/openai_key.example.txt
 *.key
 *.pem
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
 secrets.*
 .env
 .env.*
+!.env.example
 wifi_credentials*
+wifi_secrets*
+# Flash encryption / secure boot keys: losing or leaking these bricks devices
+flash_encryption_key*.bin
+*signing_key*
 
 # Recordings and captures (privacy)
 *.wav.rec
@@ -30,6 +52,11 @@ captures/
 Thumbs.db
 __pycache__/
 *.pyc
+.venv/
+venv/
+node_modules/
+*.swp
+*~
 tests/build/
 
 # Hardware test captures (tools/collect_hw_log.py); commit reviewed ones to docs/test-logs/
