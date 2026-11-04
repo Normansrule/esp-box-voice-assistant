@@ -34,7 +34,7 @@ jobs:
             rm -rf firmware_release
           fi
       - run: python tools/build_site.py
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
