@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "esp_err.h"
-#include "driver/i2s_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,10 +132,13 @@ void hw_speaker_restore_capture_format(void);
  * reliable. Reconfiguring closes and reopens the I2S channels, so do not call
  * it while the player is writing.
  *
- * @param force  Reconfigure even if the cached format matches.
+ * @param channels  An i2s_slot_mode_t value (I2S_SLOT_MODE_MONO / _STEREO).
+ *                  Passed as a plain integer so this header does not depend on
+ *                  where the I2S driver keeps that type in a given ESP-IDF.
+ * @param force     Reconfigure even if the cached format matches.
  */
 esp_err_t hw_speaker_set_codec_format(uint32_t rate, uint32_t bits_per_sample,
-                                      i2s_slot_mode_t channels, bool force);
+                                      uint32_t channels, bool force);
 
 #ifdef __cplusplus
 }

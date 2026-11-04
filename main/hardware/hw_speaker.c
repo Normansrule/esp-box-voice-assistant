@@ -233,17 +233,17 @@ static esp_err_t speaker_mute_cb(AUDIO_PLAYER_MUTE_SETTING setting)
  */
 static uint32_t       s_codec_rate;
 static uint32_t       s_codec_bits;
-static i2s_slot_mode_t s_codec_channels;
+static uint32_t       s_codec_channels;
 static bool           s_codec_format_known;
 
 esp_err_t hw_speaker_set_codec_format(uint32_t rate, uint32_t bits_per_sample,
-                                      i2s_slot_mode_t channels, bool force)
+                                      uint32_t channels, bool force)
 {
     if (!force && s_codec_format_known && rate == s_codec_rate &&
         bits_per_sample == s_codec_bits && channels == s_codec_channels) {
         return ESP_OK;
     }
-    const esp_err_t err = bsp_codec_set_fs(rate, bits_per_sample, channels);
+    const esp_err_t err = bsp_codec_set_fs(rate, bits_per_sample, (i2s_slot_mode_t)channels);
     if (err == ESP_OK) {
         s_codec_rate = rate;
         s_codec_bits = bits_per_sample;
