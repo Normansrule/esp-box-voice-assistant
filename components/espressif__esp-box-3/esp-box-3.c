@@ -2,6 +2,10 @@
  * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Modified for ESP-BOX Voice (Desk Buddy), 2026: touch failures are no longer
+ * fatal and the legacy-I2C touch config is fixed. Each change is marked
+ * "DESK BUDDY PATCH"; see DESK_BUDDY_PATCHES.md in this folder.
  */
 
 #include "driver/gpio.h"

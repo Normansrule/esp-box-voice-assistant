@@ -648,7 +648,6 @@ expression is a row in a table.
 | --- | --- |
 | `scripts\run_tests.py` | Builds and runs the host test suite. Start here. |
 | `scripts\check_sources.py` | Static sanity check: functions declared but never defined, calls to things that do not exist, sources missing from the build. |
-| `scripts\tidy_project_folder.ps1` | Moves the leftover esp-box repository files into `_archive\`, leaving a clean standalone project. Deletes nothing. |
 | `scripts\make_chimes.py` | Regenerates the four notification sounds in `spiffs/`. Edit the note table at the bottom to change them. |
 
 ---
@@ -755,17 +754,18 @@ to get one. It is not required to build the firmware.
 ### 2. The on-device self test — runs at every boot
 
 The buddy checks itself once everything is up, and prints a block like this to
-the serial monitor:
+the serial monitor (illustrative layout; the numbers depend on the build
+and on what is plugged in):
 
 ```
 ---- self test ----------------------------------
   [ok  ] PSRAM          6284 KB free
-  [ok  ] Internal RAM   118 KB free
+  [ok  ] Internal RAM   57 KB free
   [ok  ] Filesystem     mounted at /spiffs
   [ok  ] Chimes         all 4 present
   [note] Music          no tracks in /spiffs/music
   [ok  ] Sensor dock    23.4 C, 41% humidity
-  [ok  ] Speech engine  listening, 38 phrases
+  [ok  ] Speech engine  listening, 147 phrases
   [ok  ] Microphone     live
   [note] Wi-Fi          not set up yet
   [note] Online brain   switched off

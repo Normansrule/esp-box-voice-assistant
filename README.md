@@ -18,7 +18,9 @@
   <img alt="Offline first" src="https://img.shields.io/badge/offline-first-F7ADA8?style=flat-square">
 </p>
 
-**ESP-BOX Voice** is the Desk Buddy firmware for the **ESP32-S3-BOX-3**: a face on a 320×240 touchscreen that hears **“Hi E.S.P.”** on the chip, answers **125 English phrases offline**, speaks from **356 recorded clips** in flash, and only asks an online model when you switch that on.
+**ESP-BOX Voice** is the Desk Buddy firmware for the **ESP32-S3-BOX-3**: a face on a 320×240 touchscreen that hears **“Hi E.S.P.”** on the chip, answers **147 English phrases offline**, speaks from **393 recorded clips** in flash, and only asks an online model when you switch that on.
+
+On the device itself, "AI" means speech recognition: ESP-SR WakeNet spots the wake word and MultiNet matches one of the fixed phrases, and each phrase has hand-written replies. Nothing on the chip generates text or speech. Free-form questions are answered only by the optional online brain or Home AI, both off by default.
 
 > [!NOTE]
 > The web page and every image in this README are drawn from the firmware's own tables by `tools/`. They are **simulations of the UI**, not captures from a device. Nothing here shows a device reading.
@@ -102,7 +104,7 @@ One off-the-shelf Espressif kit, no soldering. Links are Espressif's [official s
 | **ESP32-S3-BOX-3** (recommended) | Main unit + BOX-3-SENSOR dock (temperature/humidity, radar, IR, microSD, 18650 slot) + DOCK, BRACKET, BREAD | [Espressif](https://www.espressif.com/en/dev-board/esp32-s3-box-3-en) · [Adafruit](https://www.adafruit.com/product/5835) · [Amazon](https://www.amazon.com/dp/B0CL6HD8JX) · [DigiKey](https://www.digikey.com/en/products/detail/espressif-systems/ESP32-S3-BOX-3/21556209) · [Mouser](https://www.mouser.com/ProductDetail/Espressif-Systems/ESP32-S3-BOX-3) · [AliExpress](https://www.aliexpress.com/item/1005006169541505.html) |
 | **ESP32-S3-BOX-3B** | Main unit + DOCK only. Everything works except the temperature readout and presence radar | [Adafruit](https://www.adafruit.com/product/5883) · [Amazon](https://www.amazon.com/gp/product/B0CSJC5BX6) · [DigiKey](https://www.digikey.com/en/products/detail/espressif-systems/ESP32-S3-BOX-3B/22286690) · [Mouser](https://www.mouser.com/ProductDetail/Espressif-Systems/ESP32-S3-BOX-3B) |
 
-No affiliate tags are set, so these links earn nothing. Tags live in one place, `web/assets/shop.js`, and the site shows a disclosure automatically once one is filled in. The firmware does not measure the 18650 battery yet; use a protected cell and Espressif's charging instructions.
+No affiliate tags are set, so these links earn nothing. Tags live in one place, `web/assets/shop.js`, and the site shows a disclosure automatically once one is filled in. The firmware reads the 18650 voltage on the BOX-3-SENSOR dock and shows an *estimated* percentage (there is no fuel gauge). It does not control charging; use a protected cell and Espressif's charging instructions.
 
 ## Build and flash
 
@@ -141,7 +143,7 @@ idf.py -p "$ESP_PORT" flash monitor
 
 `Ctrl` + `]` leaves the monitor. If the port never appears, hold **BOOT** while plugging in USB-C. To go back to Espressif's factory demo, flash the stock `factory_test_fw-ESP-BOX-3.bin` from the [esp-box repository](https://github.com/espressif/esp-box) with the [ESP Launchpad](https://espressif.github.io/esp-launchpad/) or `esptool.py`.
 
-**Verified on this repository's commit:** `idf.py build` with ESP-IDF v5.5.5 (GCC 14.2.0) produces a 1,965,360-byte app, 47% of the smallest app partition free. Details in [docs/BUILD_RESULTS.md](docs/BUILD_RESULTS.md). Flashing and on-device behaviour were not re-tested for this repository.
+**Verified build:** CI builds every push in the `espressif/idf:v5.5.5` container (GCC 14.2.0). At commit `b32c79b` the app is 1,999,632 bytes (0x1e8310), 46% of the app partition free, with no compiler warnings. Details in [docs/BUILD_RESULTS.md](docs/BUILD_RESULTS.md). Flashing and on-device behaviour were not re-tested for this repository.
 
 ### The online brain, safely
 
@@ -160,20 +162,23 @@ It ships **off**. To use it, put a project-scoped key with a low monthly limit i
 
 ## Status
 
+Labels follow [docs/ROADMAP.md](docs/ROADMAP.md): **VERIFIED BUILD**, **VERIFIED IN TEST**, **VERIFIED ON DEVICE**, **SIMULATED**, **UNTESTED ON DEVICE**, **PLANNED**. A feature moves to VERIFIED ON DEVICE only when its serial log or measurement is committed under `docs/test-logs/`.
+
 | Feature | State | Evidence |
 | --- | --- | --- |
-| Firmware build, esp32s3, ESP-IDF v5.5.5 | **Verified build** | [docs/BUILD_RESULTS.md](docs/BUILD_RESULTS.md) |
-| Face, expressions, antics, lip sync | In firmware | `main/face/` |
-| Wake word and offline phrases (ESP-SR) | In firmware | `main/voice/` |
-| Offline voice clips | In firmware | `spiffs/voice/` |
-| Online brain (OpenAI), off by default | In firmware | `voice_cloud_brain.c`, `voice_router.c` |
-| Home AI (small AI on your own PC, free, no account) | In firmware; PC side **verified in test**, **untested on device** | `tools/home_brain/`: sums, percentages, word problems, dates, clock maths and unit conversions are computed exactly by tools (15 unit tests pass); other questions go to llama3.2. The `--think` mode is untested live. |
-| Temperature, humidity, presence (sensor dock) | In firmware | `hw_sensors.c` |
-| Host unit tests | Runs in CI | `.github/workflows/ci.yml` |
-| Battery voltage on BOX-3-SENSOR (GPIO10, ÷4.01), ~percent estimate, low warning | In firmware, **untested on device** | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
-| Motion: eyes follow tilt, shake → dizzy, pick up → surprised (ICM-42607-P) | In firmware, **untested on device** | `hw_imu.c`, `buddy_motion.c`. [Test it](docs/HARDWARE_TESTS.md) |
-| Screen themes: Paper (day) and Ember (night), caption fade, steady timer pill | In firmware, **untested on device** | `face_theme.c`; pick one in `idf.py menuconfig` → Desk Buddy appearance. [docs/DESIGN.md](docs/DESIGN.md) |
-| Web simulator | **Simulation** | browser only, never device data |
+| Firmware build, esp32s3, ESP-IDF v5.5.5 | **VERIFIED BUILD** | CI on every push; [docs/BUILD_RESULTS.md](docs/BUILD_RESULTS.md) |
+| Host unit tests, source checks | **VERIFIED IN TEST** | `scripts/run_tests.py` in `.github/workflows/ci.yml` |
+| Face, expressions, antics, lip sync | UNTESTED ON DEVICE | `main/face/` |
+| Wake word and 147 offline phrases (ESP-SR WakeNet + MultiNet) | UNTESTED ON DEVICE | `main/voice/` |
+| Offline voice clips | UNTESTED ON DEVICE | `spiffs/voice/` |
+| Mute switch stops capture | UNTESTED ON DEVICE; no on-screen mute indicator yet | `hw_microphone.c` |
+| Online brain (OpenAI), off by default | UNTESTED ON DEVICE | `voice_cloud_brain.c`, `voice_router.c` |
+| Home AI (small AI on your own PC, free, no account) | PC side **VERIFIED IN TEST**; UNTESTED ON DEVICE | `tools/home_brain/`: sums, percentages, word problems, dates, clock maths and unit conversions are computed exactly by tools (15 unit tests pass); other questions go to llama3.2. The `--think` mode is untested live. Plain `http://` on the LAN, so audio is not encrypted on the way to the PC. |
+| Temperature, humidity, presence (sensor dock) | UNTESTED ON DEVICE | `hw_sensors.c` |
+| Battery voltage on BOX-3-SENSOR (GPIO10, ÷4.01), **estimated** percent, low warning | UNTESTED ON DEVICE | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
+| Motion: eyes follow tilt, shake → dizzy, pick up → surprised (ICM-42607-P) | UNTESTED ON DEVICE | `hw_imu.c`, `buddy_motion.c`. [Test it](docs/HARDWARE_TESTS.md) |
+| Screen themes: Paper (day) and Ember (night), caption fade, steady timer pill | UNTESTED ON DEVICE | `face_theme.c`; pick one in `idf.py menuconfig` → Desk Buddy appearance. [docs/DESIGN.md](docs/DESIGN.md) |
+| Web simulator | **SIMULATED** | browser only, never device data |
 
 Roadmap and hardware rules: [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -184,6 +189,7 @@ Look and feel: [docs/DESIGN.md](docs/DESIGN.md) (Paper and Ember themes, palette
 ```
 main/            firmware (face/, voice/, ui/, audio/, hardware/, net/, core/)
 components/bsp/  board support from espressif/esp-box (Apache-2.0)
+components/espressif__esp-box-3/  patched copy of the esp-box-3 1.1.3 BSP (Apache-2.0)
 spiffs/          chimes, music, offline voice clips (flashed to "storage")
 tests/ scripts/  host tests and source checks
 tools/           data extraction, README art, site build
@@ -193,4 +199,4 @@ docs/            guide, build results, roadmap, images
 
 ## License
 
-Firmware, tools, site and audio: Unlicense OR CC0-1.0 (see [LICENSE](LICENSE)). `components/bsp/` comes from [espressif/esp-box](https://github.com/espressif/esp-box) under Apache-2.0 ([components/bsp/LICENSE](components/bsp/LICENSE)). Managed components keep their own licenses. Music is synthesised by `scripts/make_music.py` from public-domain scores; voice clips are rendered by `scripts/make_voice_clips.py` with eSpeak NG.
+Firmware, tools, site and audio: Unlicense OR CC0-1.0 (see [LICENSE](LICENSE)). `components/bsp/` comes from [espressif/esp-box](https://github.com/espressif/esp-box) under Apache-2.0 ([components/bsp/LICENSE](components/bsp/LICENSE)). `components/espressif__esp-box-3/` is Espressif's esp-box-3 BSP 1.1.3 under Apache-2.0, with the changes listed in its [DESK_BUDDY_PATCHES.md](components/espressif__esp-box-3/DESK_BUDDY_PATCHES.md). Managed components keep their own licenses; firmware images include ESP-SR (Espressif MIT, Espressif chips only) and the Helix MP3 decoder (RealNetworks RPSL). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Music is synthesised by `scripts/make_music.py` from public-domain scores; voice clips are rendered by `scripts/make_voice_clips.py` with eSpeak NG.

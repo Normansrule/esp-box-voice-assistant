@@ -10,7 +10,7 @@ Nothing moves to "verified on device" without serial logs or measurements commit
 | 1 Hardware audit | Identify battery hardware: BOX-3-SENSOR dock 18650 holder or other module; charger, protection, power switch, voltage sense | PLANNED |
 | 2 Bring-up | Firmware builds on ESP-IDF v5.5.5 | VERIFIED BUILD |
 | 2 Bring-up | Flash, boot self-test log, touch, mic, speaker on this repo's build | UNTESTED |
-| 3 Offline voice | Wake word, 125 phrases, offline clips, mute switch | in firmware, UNTESTED for this repo |
+| 3 Offline voice | Wake word, 147 phrases, offline clips, mute switch | in firmware, UNTESTED for this repo |
 | 4 Portable UX | Battery voltage via GPIO10 (verified sense line on SENSOR-01 V1.1), estimated percentage, low-battery alert | IN FIRMWARE, UNTESTED ON DEVICE |
 | 4 Portable UX | Sleep profiles, battery-life measurements | PLANNED |
 | 4 Portable UX | IMU at 50 Hz, rest-pose zeroing, tilt gaze, shake, pick-up/set-down | IN FIRMWARE, UNTESTED ON DEVICE |
