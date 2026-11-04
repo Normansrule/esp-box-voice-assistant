@@ -55,9 +55,93 @@ static const char *TAG = "face_view";
  */
 #define MOUTH_BECOMES_OPENING_AT    FACE_MOUTH_THICKNESS
 
-/** Distinct addresses used to tell our two animations apart. */
+/** Distinct addresses used to tell our animations apart. */
 static uint8_t s_pose_anim_tag;
 static uint8_t s_shift_anim_tag;
+
+/* ------------------------------------------------------------------------ */
+/* Face marks                                                                */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * A mark is at most two strokes plus one small rounded "dot" (the dot of a
+ * "!", a bead of sweat, a tear), drawn inside a small box. Every stroke is an
+ * lv_line pointing at a const table in flash, so a mark costs no RAM beyond
+ * its three widgets, and only the widgets a mark needs are ever unhidden.
+ *
+ * The anchor says where the box hangs: beside the right eye (clear of the
+ * sensor chip above it and the timer pill top-left), under the left eye, or
+ * centred on the mouth. Every number is mirrored in web/assets/face.js.
+ */
+#if defined(CONFIG_BUDDY_UI_REDUCED_MOTION) && CONFIG_BUDDY_UI_REDUCED_MOTION
+#define MARK_ANIMATE            0
+#else
+#define MARK_ANIMATE            1
+#endif
+
+#define MARK_STROKE             5
+#define MARK_ZIP_STROKE         4
+#define MARK_MAX_POINTS         11
+
+/* Top-left of the box beside the right eye, before face offsets. */
+#define MARK_SIDE_X             (SCREEN_CENTRE_X + FACE_EYE_SPACING_FROM_CENTRE + FACE_EYE_WIDTH / 2 + 12)
+#define MARK_SIDE_Y             (FACE_EYE_CENTRE_Y - 54)
+/* Top-left of the box under the left eye (inner side, clear of the blush). */
+#define MARK_TEAR_X             (SCREEN_CENTRE_X - FACE_EYE_SPACING_FROM_CENTRE + 8)
+#define MARK_TEAR_Y             (FACE_EYE_CENTRE_Y + FACE_EYE_HEIGHT / 2 + 4)
+/* The zip box is centred on the mouth. */
+#define MARK_ZIP_W              62
+#define MARK_ZIP_H              24
+
+typedef enum { MARK_AT_SIDE = 0, MARK_AT_TEAR, MARK_AT_MOUTH } mark_anchor_t;
+
+typedef struct {
+    const lv_point_t *points;
+    uint8_t           count;
+} mark_stroke_t;
+
+typedef struct {
+    mark_anchor_t anchor;
+    lv_coord_t    box_w, box_h;
+    uint8_t       stroke_width;
+    mark_stroke_t stroke[2];
+    lv_area_t     dot;               /* x1,y1,x2,y2 in the box; x2 < x1 = none */
+    int8_t        bob_px;            /* how far it drifts while bobbing; - = down */
+} mark_spec_t;
+
+static const lv_point_t s_pts_sleep_big[]   = { {4, 26}, {26, 26}, {4, 48}, {26, 48} };
+static const lv_point_t s_pts_sleep_small[] = { {30, 4}, {42, 4}, {30, 16}, {42, 16} };
+static const lv_point_t s_pts_question[]    = { {9, 12}, {13, 6}, {20, 3}, {28, 6},
+                                                {31, 13}, {27, 20}, {20, 24}, {20, 29} };
+static const lv_point_t s_pts_exclaim[]     = { {20, 4}, {20, 28} };
+static const lv_point_t s_pts_heart[]       = { {20, 38}, {7, 26}, {4, 17}, {7, 9}, {13, 6},
+                                                {20, 12}, {27, 6}, {33, 9}, {36, 17},
+                                                {33, 26}, {20, 38} };
+static const lv_point_t s_pts_zip[]         = { {4, 12}, {13, 2}, {22, 22}, {31, 2},
+                                                {40, 22}, {49, 2}, {58, 12} };
+
+#define PTS(a)      { (a), (uint8_t)(sizeof(a) / sizeof((a)[0])) }
+#define NO_STROKE   { NULL, 0 }
+#define NO_DOT      { 1, 0, 0, 0 }
+
+static const mark_spec_t s_mark_specs[FACE_MARK_COUNT] = {
+    [FACE_MARK_NONE]     = { MARK_AT_SIDE, 1, 1, MARK_STROKE,
+                             { NO_STROKE, NO_STROKE }, NO_DOT, 0 },
+    [FACE_MARK_SLEEP]    = { MARK_AT_SIDE, 46, 52, MARK_STROKE,
+                             { PTS(s_pts_sleep_big), PTS(s_pts_sleep_small) }, NO_DOT, 8 },
+    [FACE_MARK_SWEAT]    = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { NO_STROKE, NO_STROKE }, { 4, 6, 15, 24 }, 3 },
+    [FACE_MARK_TEAR]     = { MARK_AT_TEAR, 16, 24, MARK_STROKE,
+                             { NO_STROKE, NO_STROKE }, { 2, 2, 12, 18 }, -3 },
+    [FACE_MARK_QUESTION] = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_question), NO_STROKE }, { 17, 35, 23, 41 }, 3 },
+    [FACE_MARK_EXCLAIM]  = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_exclaim), NO_STROKE }, { 17, 35, 23, 41 }, 3 },
+    [FACE_MARK_HEART]    = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_heart), NO_STROKE }, NO_DOT, 3 },
+    [FACE_MARK_ZIP]      = { MARK_AT_MOUTH, MARK_ZIP_W, MARK_ZIP_H, MARK_ZIP_STROKE,
+                             { PTS(s_pts_zip), NO_STROKE }, NO_DOT, 0 },
+};
 
 /* ------------------------------------------------------------------------ */
 /* Widget handles and state                                                  */
@@ -74,6 +158,14 @@ static lv_obj_t *s_brow[SIDE_COUNT];
 static lv_obj_t *s_blush[SIDE_COUNT];
 static lv_obj_t *s_mouth_line;
 static lv_obj_t *s_mouth_open;
+static lv_obj_t *s_mark_stroke[2];
+static lv_obj_t *s_mark_dot;
+
+/** Which mark is showing, and where the face was at the last layout. */
+static face_mark_t s_mark = FACE_MARK_NONE;
+static int16_t     s_mark_bob;
+static int16_t     s_mark_side_dx, s_mark_side_dy;
+static int16_t     s_mark_mouth_dx, s_mark_mouth_dy;
 
 /*
  * LVGL stores only a POINTER to line points, it does not copy them, so these
@@ -464,6 +556,47 @@ static void layout_blush(const face_pose_t *pose, int16_t face_dx, int16_t face_
     }
 }
 
+/**
+ * @brief Move the visible mark's widgets to follow the face (and the bob).
+ *
+ * Cheap on purpose: three set_pos calls at most, and LVGL skips any that do
+ * not actually move. Called from apply_pose and from the bob animation.
+ */
+static void layout_marks(void)
+{
+    if (s_mark == FACE_MARK_NONE) {
+        return;
+    }
+    const mark_spec_t *spec = &s_mark_specs[s_mark];
+
+    lv_coord_t x, y;
+    switch (spec->anchor) {
+    case MARK_AT_TEAR:
+        x = MARK_TEAR_X + s_mark_side_dx;
+        y = MARK_TEAR_Y + s_mark_side_dy;
+        break;
+    case MARK_AT_MOUTH:
+        x = SCREEN_CENTRE_X - spec->box_w / 2 + s_mark_mouth_dx;
+        y = FACE_MOUTH_CENTRE_Y - spec->box_h / 2 + s_mark_mouth_dy;
+        break;
+    case MARK_AT_SIDE:
+    default:
+        x = MARK_SIDE_X + s_mark_side_dx;
+        y = MARK_SIDE_Y + s_mark_side_dy;
+        break;
+    }
+    y -= s_mark_bob;
+
+    for (int i = 0; i < 2; i++) {
+        if (spec->stroke[i].count > 0) {
+            lv_obj_set_pos(s_mark_stroke[i], x, y);
+        }
+    }
+    if (spec->dot.x2 >= spec->dot.x1) {
+        lv_obj_set_pos(s_mark_dot, x + spec->dot.x1, y + spec->dot.y1);
+    }
+}
+
 void face_view_apply_pose(const face_pose_t *pose)
 {
     if (!s_created || pose == NULL) {
@@ -517,6 +650,13 @@ void face_view_apply_pose(const face_pose_t *pose)
     layout_brows(pose, face_dx, face_dy, look_dx, look_dy);
     layout_mouth(pose, face_dx, face_dy, look_dx, look_dy);
     layout_blush(pose, face_dx, face_dy, look_dx, look_dy);
+
+    /* Marks ride with the face like the brows do: half the gaze. */
+    s_mark_side_dx  = face_dx + look_dx / 2;
+    s_mark_side_dy  = face_dy + look_dy / 2;
+    s_mark_mouth_dx = face_dx + look_dx / 3;
+    s_mark_mouth_dy = pose->mouth_offset_y + face_dy + look_dy / 3;
+    layout_marks();
 }
 
 /* ------------------------------------------------------------------------ */
@@ -646,6 +786,87 @@ void face_view_set_hidden(bool hidden)
     }
 }
 
+#if MARK_ANIMATE
+static uint8_t s_mark_anim_tag;
+
+static void mark_bob_step_cb(void *unused, int32_t value)
+{
+    (void)unused;
+    if (value != s_mark_bob) {
+        s_mark_bob = (int16_t)value;
+        layout_marks();
+    }
+}
+#endif
+
+void face_view_set_mark(face_mark_t mark)
+{
+    if (!s_created) {
+        return;
+    }
+    if (mark < 0 || mark >= FACE_MARK_COUNT) {
+        mark = FACE_MARK_NONE;
+    }
+    if (mark == s_mark) {
+        return;
+    }
+
+#if MARK_ANIMATE
+    lv_anim_del(&s_mark_anim_tag, mark_bob_step_cb);
+#endif
+    s_mark = mark;
+    s_mark_bob = 0;
+
+    const mark_spec_t *spec = &s_mark_specs[mark];
+
+    for (int i = 0; i < 2; i++) {
+        if (spec->stroke[i].count > 0) {
+            lv_obj_set_size(s_mark_stroke[i], spec->box_w, spec->box_h);
+            lv_obj_set_style_line_width(s_mark_stroke[i], spec->stroke_width, LV_PART_MAIN);
+            lv_line_set_points(s_mark_stroke[i], spec->stroke[i].points, spec->stroke[i].count);
+            lv_obj_clear_flag(s_mark_stroke[i], LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(s_mark_stroke[i], LV_OBJ_FLAG_HIDDEN);
+        }
+    }
+
+    if (spec->dot.x2 >= spec->dot.x1) {
+        lv_obj_set_size(s_mark_dot, spec->dot.x2 - spec->dot.x1 + 1,
+                        spec->dot.y2 - spec->dot.y1 + 1);
+        lv_obj_clear_flag(s_mark_dot, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(s_mark_dot, LV_OBJ_FLAG_HIDDEN);
+    }
+
+    layout_marks();
+
+#if MARK_ANIMATE
+    /*
+     * A slow bob, so the mark reads as alive rather than stuck on. Only the
+     * mark's own small widgets move (never object-wide opacity, which would
+     * need a layer buffer in internal RAM), and the callback skips frames
+     * where the rounded value did not change: a few repaints a second.
+     */
+    if (spec->bob_px != 0) {
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, &s_mark_anim_tag);
+        lv_anim_set_exec_cb(&anim, mark_bob_step_cb);
+        lv_anim_set_values(&anim, 0, spec->bob_px);
+        lv_anim_set_time(&anim, FACE_MARK_BOB_MS);
+        lv_anim_set_playback_time(&anim, FACE_MARK_BOB_MS);
+        lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
+        lv_anim_set_path_cb(&anim, lv_anim_path_ease_in_out);
+        lv_anim_start(&anim);
+    }
+#endif
+}
+
+face_mark_t face_view_get_mark(void)
+{
+    return s_mark;
+}
+
 /* ------------------------------------------------------------------------ */
 /* Construction                                                              */
 /* ------------------------------------------------------------------------ */
@@ -701,6 +922,15 @@ esp_err_t face_view_create(lv_obj_t *parent)
     s_mouth_open = create_bare_shape(s_root, face_theme_hex(FACE_TOKEN_FACE));
     lv_obj_set_style_radius(s_mouth_open, LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_add_flag(s_mouth_open, LV_OBJ_FLAG_HIDDEN);
+
+    /* Marks go on top of everything (the zip has to cross the mouth). */
+    for (int i = 0; i < 2; i++) {
+        s_mark_stroke[i] = create_stroke(s_root, 1, 1, MARK_STROKE);
+        lv_obj_add_flag(s_mark_stroke[i], LV_OBJ_FLAG_HIDDEN);
+    }
+    s_mark_dot = create_bare_shape(s_root, face_theme_hex(FACE_TOKEN_FACE));
+    lv_obj_set_style_radius(s_mark_dot, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+    lv_obj_add_flag(s_mark_dot, LV_OBJ_FLAG_HIDDEN);
 
     s_created = true;
     s_vertical_shift = 0;

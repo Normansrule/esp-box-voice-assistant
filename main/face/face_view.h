@@ -23,6 +23,10 @@
  *
  *   blush   Two pale circles whose opacity rides along with the mood.
  *
+ *   marks   Up to two short strokes and one rounded dot that draw a symbol
+ *           beside the face: a "Z", a bead of sweat, a "?", a heart, the
+ *           stitches over a muted mouth. Hidden unless the emotion has one.
+ *
  * IMPORTANT: every function here must be called with the LVGL lock held. Use
  * hw_display_lock() / hw_display_unlock() from any task that is not LVGL's own.
  */
@@ -33,6 +37,7 @@
 #include <stdint.h>
 #include "esp_err.h"
 #include "lvgl.h"
+#include "face_emotions.h"
 #include "face_pose.h"
 
 #ifdef __cplusplus
@@ -108,6 +113,19 @@ void face_view_set_hidden(bool hidden);
  * at a steady rate for smooth movement.
  */
 void face_view_set_gaze_bias(int16_t look_x, int16_t look_y);
+
+/**
+ * @brief Show one face mark (or FACE_MARK_NONE to clear it).
+ *
+ * The animator calls this alongside every expression change, using
+ * face_emotion_get_mark(), so a mark only ever appears with its emotion.
+ */
+void face_view_set_mark(face_mark_t mark);
+
+/**
+ * @brief The mark currently on screen.
+ */
+face_mark_t face_view_get_mark(void);
 
 #ifdef __cplusplus
 }

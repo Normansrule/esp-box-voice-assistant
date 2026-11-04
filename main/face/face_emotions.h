@@ -72,12 +72,38 @@ typedef enum {
     FACE_EMOTION_FOCUSED,       /*!< Narrow eyes locked forward, brows level    */
     FACE_EMOTION_PLAYFUL,       /*!< Wide grin, one brow up, head tilted by an offset */
     FACE_EMOTION_EXHAUSTED,     /*!< Lids heavy, brows sagging, mouth slack     */
+    /* Added in v3.8. */
+    FACE_EMOTION_MUTED,         /*!< Eyes soft, lips zipped: the mute switch is ON.
+                                     STATUS ONLY - never parsed from a cloud reply */
 
     FACE_EMOTION_LISTENING,     /*!< Alert, brows raised, mouth a small circle  */
     FACE_EMOTION_THINKING,      /*!< Eyes rolled up and to one side             */
     FACE_EMOTION_SPEAKING,      /*!< Friendly base pose the lip-sync animates   */
     FACE_EMOTION_COUNT,
 } face_emotion_t;
+
+/**
+ * @brief A small symbol drawn beside the face to sharpen an expression.
+ *
+ * Cartoon faces lean on these - a bead of sweat, a floating "Z", a heart - to
+ * say in one glance what eyes and a mouth alone can only hint at. Each emotion
+ * owns at most one (see face_emotion_get_mark()), so a mark can only appear
+ * when the face is wearing an emotion that some real event asked for.
+ *
+ * Every mark is built from one or two strokes and one small rounded shape in
+ * the face colour: no images, no fonts, no extra RAM worth mentioning.
+ */
+typedef enum {
+    FACE_MARK_NONE = 0,
+    FACE_MARK_SLEEP,        /*!< A big and a small "Z" drifting up beside the head */
+    FACE_MARK_SWEAT,        /*!< One bead of sweat beside the right eye            */
+    FACE_MARK_TEAR,         /*!< A tear under the left eye                         */
+    FACE_MARK_QUESTION,     /*!< A "?" beside the right eye                        */
+    FACE_MARK_EXCLAIM,      /*!< A "!" beside the right eye                        */
+    FACE_MARK_HEART,        /*!< A small outlined heart beside the right eye       */
+    FACE_MARK_ZIP,          /*!< Stitches across the mouth: microphone muted       */
+    FACE_MARK_COUNT,
+} face_mark_t;
 
 /**
  * @brief One step of a scripted antic.
@@ -110,6 +136,23 @@ typedef struct {
 const face_pose_t *face_emotion_get_pose(face_emotion_t emotion);
 
 /**
+ * @brief The symbol (if any) that accompanies an emotion.
+ *
+ * @return FACE_MARK_NONE for most emotions and for out-of-range values.
+ */
+face_mark_t face_emotion_get_mark(face_emotion_t emotion);
+
+/**
+ * @brief True for expressions that report device state rather than a mood.
+ *
+ * These must only ever be shown by the code that owns that state. Today that
+ * is FACE_EMOTION_MUTED, which the mute switch alone may display: a cloud
+ * reply tagged "[muted]" must not make the buddy LOOK muted while the
+ * microphone is live, so face_emotion_from_name() refuses these names.
+ */
+bool face_emotion_is_status_only(face_emotion_t emotion);
+
+/**
  * @brief Human-readable name of an emotion, e.g. "happy". Never NULL.
  */
 const char *face_emotion_get_name(face_emotion_t emotion);
@@ -118,7 +161,8 @@ const char *face_emotion_get_name(face_emotion_t emotion);
  * @brief Parse an emotion name back into its enum value.
  *
  * Matching is case-insensitive. Used to understand the `[happy]` tag the cloud
- * brain is asked to put at the front of its replies.
+ * brain is asked to put at the front of its replies. Status-only expressions
+ * (see face_emotion_is_status_only()) never match.
  *
  * @param name      Text to match, need not be NUL-terminated at the emotion end.
  * @param name_len  Number of characters of @p name to consider.
@@ -138,6 +182,11 @@ uint8_t face_antic_get_count(void);
  * @return Pointer to a constant antic, or NULL when the index is out of range.
  */
 const face_antic_t *face_antic_get(uint8_t index);
+
+/**
+ * @brief Index of the antic with this exact display name, or -1.
+ */
+int face_antic_find(const char *name);
 
 #ifdef __cplusplus
 }

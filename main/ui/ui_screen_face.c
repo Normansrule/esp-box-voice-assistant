@@ -10,12 +10,15 @@
  */
 
 #include "esp_log.h"
+#include "esp_timer.h"
 
 #include "buddy_config.h"
 #include "buddy_settings.h"
 #include "face_animator.h"
+#include "face_mood.h"
 #include "face_theme.h"
 #include "face_view.h"
+#include "hw_buttons.h"
 #include "hw_display.h"
 #include "ui_screen_face.h"
 #include "ui_sensor_readout.h"
@@ -24,6 +27,54 @@
 #include "ui_timer_badge.h"
 
 static const char *TAG = "ui_face";
+
+/** How often the mute switch position is checked, on the LVGL task. */
+#define MUTE_POLL_MS        150
+#define MUTE_CAPTION_MS     2600
+
+static face_tickle_t s_tickle;
+static bool          s_shown_muted;
+static bool          s_mute_known;
+
+/**
+ * @brief Mirror the physical mute switch onto the face.
+ *
+ * Polled on an LVGL timer rather than pushed from the button callback: the
+ * button driver runs on another task, and polling here means the face is only
+ * ever touched with the LVGL lock already held, by LVGL itself. 150 ms is far
+ * quicker than anyone can look up from flipping the switch.
+ *
+ * The source of truth is hw_buttons_is_muted() - the same state that gates
+ * capture in hw_microphone - so the face can only say "muted" when the
+ * microphone really is returning silence.
+ */
+static void mute_poll_cb(lv_timer_t *timer)
+{
+    (void)timer;
+
+    const bool muted = hw_buttons_is_muted();
+    if (s_mute_known && muted == s_shown_muted) {
+        return;
+    }
+    const bool first_look = !s_mute_known;
+    s_mute_known = true;
+    s_shown_muted = muted;
+
+    face_animator_set_muted(muted);
+
+    /* At boot, only speak up if the switch is already on: "on" is normal. */
+    if (first_look && !muted) {
+        return;
+    }
+    ui_speech_bubble_show(UI_SPEECH_STATUS,
+                          muted ? "Microphone off. I can't hear you."
+                                : "Microphone on.",
+                          MUTE_CAPTION_MS);
+    if (!muted) {
+        /* A small "hello again" on the way back, once the face has settled. */
+        face_animator_flash_emotion(FACE_EMOTION_HAPPY, 900);
+    }
+}
 
 /**
  * @brief The screen itself was pressed.
@@ -44,9 +95,36 @@ static void screen_pressed_cb(lv_event_t *event)
 
     /* Somebody is here, so shake off any sleepiness before reacting. */
     face_animator_notice_activity();
-    face_animator_play_random_antic();
 
-    ESP_LOGD(TAG, "Poked");
+    /*
+     * One tap gets one random antic, as before. A quick run of taps is a
+     * tickle: the giggles, and if it keeps going, a scrunched-up "enough".
+     * While muted the face holds still (see face_animator_set_muted), so a
+     * tickle gets the same treatment as a poke there - nothing happens.
+     */
+    const uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
+    switch (face_tickle_register(&s_tickle, now_ms)) {
+    case FACE_TICKLE_GIGGLE: {
+        const int giggle = face_antic_find("giggle fit");
+        if (giggle >= 0) {
+            face_animator_play_antic((uint8_t)giggle);
+        }
+        ESP_LOGD(TAG, "Tickled");
+        break;
+    }
+    case FACE_TICKLE_ENOUGH:
+        if (!face_animator_is_muted()) {
+            face_animator_flash_emotion(FACE_EMOTION_SCRUNCH, 1200);
+            ui_speech_bubble_show(UI_SPEECH_FROM_BUDDY, "Okay, okay! I give up!", 1800);
+        }
+        ESP_LOGD(TAG, "Tickled too much");
+        break;
+    case FACE_TICKLE_POKE:
+    default:
+        face_animator_play_random_antic();
+        ESP_LOGD(TAG, "Poked");
+        break;
+    }
 }
 
 esp_err_t ui_screen_face_create(void)
@@ -101,6 +179,11 @@ esp_err_t ui_screen_face_create(void)
 
     err = face_animator_start();
     face_animator_set_idle_antics_enabled(settings->idle_antics_enabled);
+
+    /* Show the mute switch on the face, starting with where it sits now. */
+    if (lv_timer_create(mute_poll_cb, MUTE_POLL_MS, NULL) == NULL) {
+        ESP_LOGW(TAG, "No mute indicator timer: the face will not show mute");
+    }
 
     hw_display_unlock();
 

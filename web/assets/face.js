@@ -24,6 +24,8 @@
 
   const POSES = {};
   FW.emotions.forEach((e) => { POSES[e.name] = e.pose; });
+  const MARKS = FW.marks;
+  const markFor = (emotion) => MARKS.by_emotion[emotion] || "none";
 
   /* C semantics: int16 maths with division that truncates toward zero. */
   const div = (a, b) => Math.trunc(a / b);
@@ -175,8 +177,43 @@
 
   const DEFAULT_COLOURS = { red: T.espressif_red, bg: T.background, blush: T.blush };
 
-  /** Draw one pose in 320x240 screen space. verticalShift = speech-bubble lift. */
-  function drawFace(ctx, pose, verticalShift, colours) {
+  /* face_view.c: layout_marks() + the s_mark_specs table */
+  function drawMark(ctx, mark, pose, fdx, fdy, ldx, ldy, bob, colours) {
+    const spec = MARKS.specs[mark];
+    if (!spec || mark === "none") return;
+    let x, y;
+    if (spec.anchor === "mouth") {
+      x = CX - div(spec.box[0], 2) + fdx + div(ldx, 3);
+      y = G.FACE_MOUTH_CENTRE_Y - div(spec.box[1], 2) + pose.mouth_offset_y + fdy + div(ldy, 3);
+    } else {
+      x = spec.origin[0] + fdx + div(ldx, 2);
+      y = spec.origin[1] + fdy + div(ldy, 2);
+    }
+    y -= bob || 0;
+    ctx.save();
+    ctx.strokeStyle = colours.red;
+    ctx.fillStyle = colours.red;
+    ctx.lineWidth = spec.stroke_width;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const pts of spec.strokes) {
+      ctx.beginPath();
+      pts.forEach(([px, py], i) => (i ? ctx.lineTo(x + px, y + py) : ctx.moveTo(x + px, y + py)));
+      ctx.stroke();
+    }
+    if (spec.dot) {
+      const [dx, dy, w, h] = spec.dot;
+      roundRect(ctx, x + dx, y + dy, w, h, Math.min(w, h) / 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Draw one pose in 320x240 screen space. verticalShift = speech-bubble lift.
+   * mark / markBob: the face mark on top (face_view_set_mark) and its bob.
+   */
+  function drawFace(ctx, pose, verticalShift, colours, mark, markBob) {
     colours = colours || DEFAULT_COLOURS;
     const fdx = pose.face_offset_x;
     const fdy = pose.face_offset_y + (verticalShift || 0);
@@ -186,6 +223,7 @@
     drawEyes(ctx, pose, fdx, fdy, ldx, ldy, colours);
     drawBrows(ctx, pose, fdx, fdy, ldx, ldy, colours);
     drawMouth(ctx, pose, fdx, fdy, ldx, ldy, colours);
+    if (mark) drawMark(ctx, mark, pose, fdx, fdy, ldx, ldy, markBob, colours);
   }
 
   /* LVGL's lv_anim_path_ease_in_out is a cubic bezier (0, 0.4, 0.6, 1). */
@@ -224,7 +262,35 @@
       this.scheduleBlink();
       this.scheduleIdle();
       this.lipTimer = null;
+      this.muted = false;
+      this.mark = "none";
+      this.markSince = performance.now();
+      this.tickle = { last: 0, streak: 0 };
     }
+
+    /* face_view_set_mark: the bob restarts whenever the mark changes. */
+    setMark(mark) {
+      if (mark === this.mark) return;
+      this.mark = mark;
+      this.markSince = performance.now();
+    }
+
+    /** Current bob offset in px (LVGL ease-in-out with playback, endless). */
+    markBob(now, reducedMotion) {
+      const spec = MARKS.specs[this.mark];
+      if (!spec || !spec.bob_px || reducedMotion) return 0;
+      const period = G.FACE_MARK_BOB_MS;
+      const t = ((now - this.markSince) % (2 * period)) / period;
+      const phase = t <= 1 ? t : 2 - t;
+      return Math.round(spec.bob_px * easeInOut(phase));
+    }
+
+    showEmotion(name, ms) {
+      this.animateTo(POSES[name], ms);
+      this.setMark(markFor(name));
+    }
+
+    displayedResting() { return this.muted ? "muted" : this.resting; }
 
     on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
     emit(type, detail) { this.listeners.forEach((fn) => fn(type, detail)); }
@@ -294,9 +360,64 @@
         rand(G.FACE_IDLE_ANTIC_INTERVAL_MIN_MS, G.FACE_IDLE_ANTIC_INTERVAL_MAX_MS));
     }
 
+    /* face_mood.c: face_mood_idle_drift() */
+    static idleDrift(resting, idleMs) {
+      if (["listening", "thinking", "speaking", "muted"].includes(resting)) return resting;
+      const minute = 60000;
+      if (idleMs >= G.FACE_ASLEEP_AFTER_MINUTES * minute) return "asleep";
+      if (idleMs >= G.FACE_SLEEPY_AFTER_MINUTES * minute) return resting === "asleep" ? "asleep" : "sleepy";
+      if (idleMs >= G.FACE_MOOD_FADE_AFTER_MS && resting !== "sleepy" && resting !== "asleep") return "neutral";
+      return resting;
+    }
+
     idleTick() {
-      if (!this.idleAntics || this.speaking || this.antic) { this.scheduleIdle(); return; }
+      if (this.speaking || this.antic) { this.scheduleIdle(); return; }
+      if (!this.muted) {
+        const drifted = Animator.idleDrift(this.resting, performance.now() - this.lastActivity);
+        if (drifted !== this.resting) {
+          this.resting = drifted;
+          this.showEmotion(drifted, G.FACE_EXPRESSION_TRANSITION_MS * 3);
+          this.emit("emotion", drifted);
+          this.scheduleIdle();
+          return;
+        }
+      }
+      if (!this.idleAntics || this.muted || this.resting === "asleep") { this.scheduleIdle(); return; }
+      if (this.resting === "sleepy") {
+        const yawn = FW.antics.findIndex((a) => a.name === "yawn");
+        if (yawn >= 0 && Math.random() < 1 / 3) this.playAntic(yawn); else this.scheduleIdle();
+        return;
+      }
       this.playAntic(Math.floor(Math.random() * FW.antics.length));
+    }
+
+    /* face_animator_notice_activity */
+    noticeActivity() {
+      this.lastActivity = performance.now();
+      if (this.resting === "sleepy" || this.resting === "asleep") this.setEmotion("neutral");
+    }
+
+    /* face_tickle_register: "poke" | "giggle" | "enough" */
+    registerTap(now) {
+      const t = this.tickle;
+      if (t.streak === 0 || now - t.last > G.FACE_TICKLE_GAP_MS) t.streak = 0;
+      t.last = now;
+      t.streak++;
+      if (t.streak >= G.FACE_TICKLE_ENOUGH_TAPS) { t.streak = 0; return "enough"; }
+      return t.streak >= G.FACE_TICKLE_GIGGLE_TAPS ? "giggle" : "poke";
+    }
+
+    /* face_animator_set_muted */
+    setMuted(on) {
+      if (on === this.muted) return;
+      this.muted = on;
+      if (on) { this.cancelAntic(); this.cancel(this.flashTimer); }
+      else {
+        this.lastActivity = performance.now();
+        if (this.resting === "sleepy" || this.resting === "asleep") this.resting = "neutral";
+        this.scheduleIdle();
+      }
+      if (!this.speaking) this.returnToResting(G.FACE_EXPRESSION_TRANSITION_MS);
     }
 
     cancelAntic() {
@@ -306,7 +427,7 @@
 
     playAntic(index) {
       const antic = FW.antics[index];
-      if (!antic || this.speaking) return;
+      if (!antic || this.speaking || this.muted) return;
       this.cancelAntic();
       this.antic = { def: antic, step: 0 };
       this.emit("antic", antic.name);
@@ -326,11 +447,12 @@
       const pose = { ...POSES[s.emotion], look_x: s.look_x, look_y: s.look_y,
         face_offset_x: s.face_offset_x, face_offset_y: s.face_offset_y };
       this.animateTo(pose, s.transition_ms);
+      this.setMark(markFor(s.emotion));
       this.anticTimer = this.later(() => this.runAnticStep(), Math.max(10, s.transition_ms + s.hold_ms));
     }
 
     /* --- emotions ------------------------------------------------------ */
-    returnToResting(ms) { this.animateTo(POSES[this.resting], ms); }
+    returnToResting(ms) { this.showEmotion(this.displayedResting(), ms); }
 
     setEmotion(name, ms) {
       if (!POSES[name]) name = "neutral";
@@ -346,7 +468,7 @@
       if (!POSES[name]) return;
       this.cancelAntic();
       this.cancel(this.flashTimer);
-      this.animateTo(POSES[name], G.FACE_EXPRESSION_TRANSITION_MS);
+      this.showEmotion(name, G.FACE_EXPRESSION_TRANSITION_MS);
       this.emit("emotion", name);
       this.flashTimer = this.later(() => this.returnToResting(G.FACE_EXPRESSION_TRANSITION_MS),
         G.FACE_EXPRESSION_TRANSITION_MS + holdMs);
@@ -358,7 +480,7 @@
       this.speaking = on;
       if (on) {
         this.cancelAntic();
-        this.animateTo(POSES.speaking, div(G.FACE_EXPRESSION_TRANSITION_MS, 2));
+        this.showEmotion("speaking", div(G.FACE_EXPRESSION_TRANSITION_MS, 2));
         this.lipTimer = setInterval(() => {
           const level = this.levelSource ? this.levelSource() : 0;
           let opening = div(level * G.FACE_MOUTH_MAX_OPEN_HEIGHT, 100);
@@ -376,5 +498,5 @@
     }
   }
 
-  window.DeskBuddyFace = { POSES, W, H, drawFace, blendPose, Animator, theme: T, geometry: G };
+  window.DeskBuddyFace = { POSES, MARKS, markFor, W, H, drawFace, blendPose, Animator, theme: T, geometry: G };
 })();

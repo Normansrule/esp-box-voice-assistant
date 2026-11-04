@@ -56,6 +56,32 @@ Radius steps: 8 (small controls), 12 (chips), 14 (caption sheet, cards), 22 (lar
 - Device caption: rises 8 px and fades in over 180 ms (ease-out), leaves in 120 ms. It animates colour alpha and translation only, never LVGL's object-wide `opa`, which would render through an off-screen layer buffer in internal RAM. `CONFIG_BUDDY_UI_REDUCED_MOTION` turns it off.
 - Site: one authored moment (the hero title settles, then the 3D device). Sections no longer fade in one by one. `prefers-reduced-motion` turns animations off.
 
+## Expression: marks, fading moods and tickles
+
+The face says more with three small additions, each one driven by something that really happened. Nothing here invents an event.
+
+**Marks.** A small symbol beside the face, in the face colour, made from at most two strokes and one rounded dot (`face_view.c`, `s_mark_specs`). An emotion owns at most one mark (`face_emotions.c`, `s_emotion_marks`), so a mark appears only when some event asked for that emotion:
+
+| Mark | Worn by | Typical real trigger |
+|---|---|---|
+| Z z, drifting up | asleep | 15 minutes with no touch, wake word or arrival |
+| bead of sweat | nervous, panic, sheepish, exhausted | battery reading below the low threshold; "how much memory is free" when RAM is tight |
+| tear | sad, pleading | offline replies that call for it |
+| ? | confused, sceptical | "I did not hear anything", an unmatched phrase |
+| ! | surprised, shocked, alarmed | timer finished, box picked up |
+| heart | love, starry | "I love you" and similar replies |
+| stitches over the mouth | muted (status only) | the physical mute switch is on |
+
+Marks sit beside the right eye (clear of the sensor chip and the timer pill), under the left eye (tear) or on the mouth (stitches). They bob a few pixels unless *Reduced motion* is on. Only the mark's own widgets move; object-wide opacity is never animated.
+
+**The muted face.** `hw_buttons_is_muted()` is polled on the LVGL task every 150 ms. While the switch is on, the face rests in *muted* whatever mood a reply last set, idle and tap antics are held off, and the caption says "Microphone off. I can't hear you." The name `muted` is status-only: `face_emotion_from_name()` refuses it, so a cloud reply tagged `[muted]` cannot make the buddy look muted while the microphone is live.
+
+**Moods fade.** `face_mood.c` relaxes the last reply's expression to neutral after 90 s with nobody interacting, then sleepy at 5 minutes, then asleep at 15. Listening, thinking, speaking and muted never drift: they report what the device is doing. A sleepy buddy only yawns now and then; an asleep one keeps still.
+
+**Tickles.** One tap is one random antic, as before. Three quick taps (under 900 ms apart) set off a giggle fit; seven make it scrunch up and say "Okay, okay! I give up!".
+
+Every number above is a `#define` in `main/buddy_config.h` or `face_view.c`, and the web simulator reads the same values through `tools/extract_firmware_data.py`.
+
 ## Choosing the theme on the device
 
 `idf.py menuconfig` → *Desk Buddy appearance* → *Screen theme*: Paper (default) or Ember. `face_theme_set()` exists for a future Settings row; it applies to screens built after the call.
@@ -69,4 +95,5 @@ Both palettes are `const` (flash). The theme selector is one byte of RAM. Applyi
 | Change | State |
 |---|---|
 | Palettes, theme selection, caption fade, timer pill | **UNTESTED** on device. Compiles against the project's LVGL 8.4 headers (gcc `-fsyntax-only`, both themes, motion on and off); host tests pass. No `idf.py build` yet. |
+| Face marks, muted face, mood fading, sleep stage, tickles, three new antics | **UNTESTED** on device. Compiles against LVGL 8.4 headers (gcc `-fsyntax-only`, motion on and off); host tests cover the mark table, mood drift and tickle detection; the simulator draws the same marks. No `idf.py build` run locally (CI builds it). |
 | Site and installer restyle | **VERIFIED IN TEST**: rendered in headless Chromium at 1440 px and 390 px, no console errors, no horizontal scroll. |

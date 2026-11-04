@@ -45,6 +45,7 @@ BUILD_DIR = os.path.join(TESTS_DIR, "build")
 SOURCES_UNDER_TEST = [
     os.path.join(MAIN_DIR, "face", "face_pose.c"),
     os.path.join(MAIN_DIR, "face", "face_emotions.c"),
+    os.path.join(MAIN_DIR, "face", "face_mood.c"),
     os.path.join(MAIN_DIR, "voice", "voice_commands.c"),
     os.path.join(MAIN_DIR, "voice", "voice_mood_tag.c"),
     os.path.join(MAIN_DIR, "voice", "voice_math.c"),

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased · More expressive face
+
+- **Face marks**: a floating "Z z" when asleep, a bead of sweat (nervous, exhausted on low battery), a tear (sad), "?" (confused), "!" (shocked when the timer ends, surprised when picked up), a heart (love). Built from two strokes and a dot each; no images, no fonts, no layer buffers.
+- **Muted face**: the mute switch now shows on the screen. Soft eyes and stitched lips while muted, with a caption, and the face holds still until the switch goes back. `muted` cannot be set by a cloud reply.
+- **Moods fade**: a reply's expression relaxes to neutral after 90 s alone, then sleepy at 5 min, then asleep at 15 min. Device-state faces (listening, thinking, speaking, muted) never drift.
+- **Tickles**: three quick taps start a giggle fit; seven make the buddy scrunch up and give in.
+- Three new antics: daydream, aha, giggle fit.
+- Simulator mirrors all of it (marks, mute face, drift, tickles), generated from the firmware tables.
+- New host tests for marks, mood drift and tickle detection.
+- **Untested on device.**
+
 ## Unreleased · Beginner guide and secure development
 
 - New [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md): install, build, find the port, flash, recover and change the code on Windows, macOS and Linux, with official download links, a troubleshooting section and accessibility notes. macOS and non-Ubuntu Linux steps follow Espressif's v5.5.5 instructions and are **not yet walked through** for this project.

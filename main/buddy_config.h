@@ -193,6 +193,25 @@
 /** Minutes of no motion / no interaction before the face dozes off. */
 #define FACE_SLEEPY_AFTER_MINUTES       5
 
+/** Minutes of no interaction before sleepy becomes properly asleep ("Z z"). */
+#define FACE_ASLEEP_AFTER_MINUTES       15
+
+/**
+ * How long a reply's expression lingers once nobody is interacting, before it
+ * fades back to neutral. A mood is a reaction; it should not last for ever.
+ */
+#define FACE_MOOD_FADE_AFTER_MS         90000
+
+/** Taps closer together than this count as one tickle streak. */
+#define FACE_TICKLE_GAP_MS              900
+
+/** Taps in one streak that set off the giggles, and that make it say "enough". */
+#define FACE_TICKLE_GIGGLE_TAPS         3
+#define FACE_TICKLE_ENOUGH_TAPS         7
+
+/** How long a face mark bobs one way before coming back (reduced motion: none). */
+#define FACE_MARK_BOB_MS                900
+
 /* =========================================================================
  * Hardware
  * ========================================================================= */

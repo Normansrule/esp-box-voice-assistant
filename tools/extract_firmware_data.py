@@ -81,6 +81,9 @@ def config_and_geometry():
         "FACE_BLINK_INTERVAL_MIN_MS", "FACE_BLINK_INTERVAL_MAX_MS",
         "FACE_IDLE_ANTIC_INTERVAL_MIN_MS", "FACE_IDLE_ANTIC_INTERVAL_MAX_MS",
         "FACE_LIP_SYNC_REFRESH_MS", "BUDDY_LISTEN_WINDOW_MS",
+        "FACE_EYE_WIDTH", "FACE_SLEEPY_AFTER_MINUTES", "FACE_ASLEEP_AFTER_MINUTES",
+        "FACE_MOOD_FADE_AFTER_MS", "FACE_TICKLE_GAP_MS", "FACE_TICKLE_GIGGLE_TAPS",
+        "FACE_TICKLE_ENOUGH_TAPS", "FACE_MARK_BOB_MS",
         "BUDDY_DEFAULT_REQUESTS_PER_HOUR", "BUDDY_SENSOR_REFRESH_MS",
         "BUDDY_IMU_RATE_HZ", "BUDDY_IMU_SHAKE_G", "BUDDY_IMU_SHAKE_PEAKS", "BUDDY_IMU_SHAKE_WINDOW_MS",
         "BUDDY_IMU_PICKUP_DEG", "BUDDY_IMU_GAZE_PER_DEG", "BUDDY_BATTERY_LOW_MV",
@@ -101,6 +104,59 @@ def view_constants():
     names = ["EYE_SHUT_HEIGHT", "EYE_SHUT_CRESCENT", "BROW_BASELINE_Y", "BROW_ARCH",
              "MOUTH_CANVAS_WIDTH", "MOUTH_BASELINE_Y"]
     return {n: int(defs[n]) for n in names}
+
+
+def marks(geometry):
+    """The face marks: which emotion wears which, and how each one is drawn."""
+    emo_src = read(MAIN / "face" / "face_emotions.c")
+    names = dict(re.findall(r'\[FACE_EMOTION_(\w+)\]\s*=\s*"(\w+)"', emo_src))
+    table = emo_src.split("s_emotion_marks[FACE_EMOTION_COUNT] = {", 1)[1].split("\n};", 1)[0]
+    by_emotion = {names[e]: m.lower()
+                  for e, m in re.findall(r"\[FACE_EMOTION_(\w+)\]\s*=\s*FACE_MARK_(\w+)", table)}
+
+    src = read(MAIN / "face" / "face_view.c")
+    defs = parse_defines(src)
+    symbols = dict(geometry)
+    symbols["SCREEN_CENTRE_X"] = geometry["BUDDY_SCREEN_WIDTH"] // 2
+
+    def num(expr):
+        expr = defs.get(expr, expr)
+        for name in sorted(symbols, key=len, reverse=True):
+            expr = re.sub(r"\b%s\b" % name, str(symbols[name]), expr)
+        expr = expr.replace("/", "//")          # every term here is positive
+        if re.search(r"[^\d\s()+\-*/]", expr):
+            raise ValueError("unexpected mark expression: " + expr)
+        return eval(expr, {"__builtins__": {}}, {})
+
+    points = {}
+    for name, body in re.findall(r"static const lv_point_t (s_pts_\w+)\[\]\s*=\s*\{(.*?)\};", src, re.S):
+        points[name] = [[int(x), int(y)] for x, y in re.findall(r"\{\s*(-?\d+),\s*(-?\d+)\s*\}", body)]
+
+    anchors = {"MARK_AT_SIDE": [num("MARK_SIDE_X"), num("MARK_SIDE_Y")],
+               "MARK_AT_TEAR": [num("MARK_TEAR_X"), num("MARK_TEAR_Y")],
+               "MARK_AT_MOUTH": None}
+    spec_src = src.split("s_mark_specs[FACE_MARK_COUNT] = {", 1)[1].split("\n};", 1)[0]
+    specs = {}
+    row_re = (r"\[FACE_MARK_(\w+)\]\s*=\s*\{\s*(MARK_AT_\w+),\s*(\w+),\s*(\w+),\s*(\w+),"
+              r"\s*\{\s*(PTS\(\w+\)|NO_STROKE),\s*(PTS\(\w+\)|NO_STROKE)\s*\},"
+              r"\s*(NO_DOT|\{[^}]*\}),\s*(-?\d+)\s*\}")
+    for m in re.finditer(row_re, spec_src):
+        strokes = [points[re.match(r"PTS\((\w+)\)", st).group(1)]
+                   for st in (m.group(6), m.group(7)) if st != "NO_STROKE"]
+        dot = None
+        if m.group(8) != "NO_DOT":
+            x1, y1, x2, y2 = (int(v) for v in re.findall(r"-?\d+", m.group(8)))
+            dot = [x1, y1, x2 - x1 + 1, y2 - y1 + 1]
+        specs[m.group(1).lower()] = {
+            "anchor": m.group(2)[len("MARK_AT_"):].lower(),
+            "origin": anchors[m.group(2)],
+            "box": [num(m.group(3)), num(m.group(4))],
+            "stroke_width": num(m.group(5)),
+            "strokes": strokes, "dot": dot, "bob_px": int(m.group(9)),
+        }
+    if len(specs) != len(re.findall(r"\[FACE_MARK_\w+\]\s*=", spec_src)):
+        raise ValueError("could not parse every face mark row in face_view.c")
+    return {"by_emotion": by_emotion, "specs": specs}
 
 
 def theme():
@@ -223,6 +279,7 @@ def build():
         "geometry": geometry,
         "emotions": poses,
         "antics": antics,
+        "marks": marks(geometry),
         "commands": commands(),
         "replies": replies(),
         "battery_curve": battery_curve(),

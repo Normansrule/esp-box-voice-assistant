@@ -24,6 +24,7 @@
 
 #include "buddy_config.h"
 #include "face_animator.h"
+#include "face_mood.h"
 #include "face_view.h"
 #include "hw_speaker.h"
 
@@ -47,6 +48,7 @@ static const face_antic_t *s_active_antic;
 static uint8_t s_active_antic_step;
 
 static bool s_speaking;
+static bool s_muted;
 static bool s_idle_antics_enabled = true;
 static bool s_started;
 
@@ -102,11 +104,48 @@ static void schedule_next_idle_antic(void)
 }
 
 /**
+ * @brief Glide into an emotion's pose and put up its mark (if it has one).
+ *
+ * Every expression change goes through here or through run_current_antic_step,
+ * which is what guarantees a mark never outlives the emotion that owns it.
+ */
+static void show_emotion(face_emotion_t emotion, uint16_t duration_ms)
+{
+    face_view_animate_to(face_emotion_get_pose(emotion), duration_ms);
+    face_view_set_mark(face_emotion_get_mark(emotion));
+}
+
+/**
+ * @brief The expression the face settles into when nothing else is going on.
+ *
+ * While the mute switch is on that is always the muted face, whatever mood a
+ * reply last asked for: the microphone being off is a promise to the person
+ * in the room, so it is the one thing the face must never stop showing.
+ */
+static face_emotion_t displayed_resting_emotion(void)
+{
+    return s_muted ? FACE_EMOTION_MUTED : s_resting_emotion;
+}
+
+/**
  * @brief Glide back to whatever the resting expression currently is.
  */
 static void return_to_resting_emotion(uint16_t duration_ms)
 {
-    face_view_animate_to(face_emotion_get_pose(s_resting_emotion), duration_ms);
+    show_emotion(displayed_resting_emotion(), duration_ms);
+}
+
+/**
+ * @brief Milliseconds since the last human interaction, saturating.
+ */
+static uint32_t idle_ms(void)
+{
+    const int64_t elapsed_us = esp_timer_get_time() - s_last_activity_us;
+    if (elapsed_us <= 0) {
+        return 0;
+    }
+    const int64_t elapsed_ms = elapsed_us / 1000;
+    return (elapsed_ms > (int64_t)UINT32_MAX) ? UINT32_MAX : (uint32_t)elapsed_ms;
 }
 
 /**
@@ -206,6 +245,7 @@ static void run_current_antic_step(void)
     pose.face_offset_y = step->face_offset_y;
 
     face_view_animate_to(&pose, step->transition_ms);
+    face_view_set_mark(face_emotion_get_mark(step->emotion));
 
     /* Schedule the next step for after this one has glided and been held. */
     const uint32_t step_total_ms = (uint32_t)step->transition_ms + step->hold_ms;
@@ -233,8 +273,12 @@ void face_animator_play_antic(uint8_t index)
         return;
     }
 
-    /* An antic while speaking would fight the lip-sync, so skip it. */
-    if (s_speaking) {
+    /*
+     * An antic while speaking would fight the lip-sync, and one while muted
+     * would swap the stitched-up mouth for a grin: the mute face has to stay
+     * put, so the buddy keeps still until the switch goes back.
+     */
+    if (s_speaking || s_muted) {
         return;
     }
 
@@ -259,24 +303,43 @@ static void idle_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
 
-    if (!s_idle_antics_enabled || s_speaking || s_active_antic != NULL) {
+    if (s_speaking || s_active_antic != NULL) {
         schedule_next_idle_antic();
         return;
     }
 
     /*
-     * After a long stretch of being ignored the buddy drifts into a sleepy
-     * expression instead of performing. A tap or a wake word snaps it out.
+     * Moods fade. Left alone, the last reply's expression relaxes to neutral,
+     * then the buddy gets sleepy, then it nods off with a "Z" floating up. All
+     * of it keyed off real time since the last tap, wake word or arrival; the
+     * rules live in face_mood.c where the host tests can see them. This runs
+     * whether or not idle antics are switched on: dozing off is not a trick.
      */
-    const int64_t idle_us = esp_timer_get_time() - s_last_activity_us;
-    const int64_t sleepy_after_us = (int64_t)FACE_SLEEPY_AFTER_MINUTES * 60 * 1000000;
+    if (!s_muted) {
+        const face_emotion_t drifted = face_mood_idle_drift(s_resting_emotion, idle_ms());
+        if (drifted != s_resting_emotion) {
+            ESP_LOGD(TAG, "Idle: %s -> %s", face_emotion_get_name(s_resting_emotion),
+                     face_emotion_get_name(drifted));
+            s_resting_emotion = drifted;
+            show_emotion(drifted, FACE_EXPRESSION_TRANSITION_MS * 3);
+            schedule_next_idle_antic();
+            return;
+        }
+    }
 
-    if (idle_us > sleepy_after_us && s_resting_emotion == FACE_EMOTION_NEUTRAL) {
-        ESP_LOGD(TAG, "Nothing happening for a while - getting sleepy");
-        s_resting_emotion = FACE_EMOTION_SLEEPY;
-        face_view_animate_to(face_emotion_get_pose(FACE_EMOTION_SLEEPY),
-                             FACE_EXPRESSION_TRANSITION_MS * 3);
+    if (!s_idle_antics_enabled || s_muted || s_resting_emotion == FACE_EMOTION_ASLEEP) {
         schedule_next_idle_antic();
+        return;
+    }
+
+    /* A sleepy buddy does not perform; now and then it yawns, and that is all. */
+    if (s_resting_emotion == FACE_EMOTION_SLEEPY) {
+        const int yawn = face_antic_find("yawn");
+        if (yawn >= 0 && random_between(0, 2) == 0) {
+            face_animator_play_antic((uint8_t)yawn);
+        } else {
+            schedule_next_idle_antic();
+        }
         return;
     }
 
@@ -331,7 +394,7 @@ void face_animator_flash_emotion(face_emotion_t emotion, uint16_t hold_ms)
         s_flash_timer = NULL;
     }
 
-    face_view_animate_to(face_emotion_get_pose(emotion), FACE_EXPRESSION_TRANSITION_MS);
+    show_emotion(emotion, FACE_EXPRESSION_TRANSITION_MS);
 
     const uint32_t total_ms = FACE_EXPRESSION_TRANSITION_MS + hold_ms;
     s_flash_timer = lv_timer_create(flash_timer_cb, total_ms, NULL);
@@ -376,8 +439,7 @@ void face_animator_set_speaking(bool speaking)
 
     if (speaking) {
         cancel_active_antic();
-        face_view_animate_to(face_emotion_get_pose(FACE_EMOTION_SPEAKING),
-                             FACE_EXPRESSION_TRANSITION_MS / 2);
+        show_emotion(FACE_EMOTION_SPEAKING, FACE_EXPRESSION_TRANSITION_MS / 2);
 
         if (s_lip_sync_timer == NULL) {
             s_lip_sync_timer = lv_timer_create(lip_sync_timer_cb,
@@ -405,6 +467,41 @@ void face_animator_set_idle_antics_enabled(bool enabled)
     if (enabled) {
         schedule_next_idle_antic();
     }
+}
+
+void face_animator_set_muted(bool muted)
+{
+    if (muted == s_muted) {
+        return;
+    }
+    s_muted = muted;
+
+    if (muted) {
+        cancel_active_antic();
+        if (s_flash_timer != NULL) {
+            lv_timer_del(s_flash_timer);
+            s_flash_timer = NULL;
+        }
+    } else {
+        /* Back on: wake up properly rather than resuming a stale mood. */
+        s_last_activity_us = esp_timer_get_time();
+        if (s_resting_emotion == FACE_EMOTION_SLEEPY ||
+            s_resting_emotion == FACE_EMOTION_ASLEEP) {
+            s_resting_emotion = FACE_EMOTION_NEUTRAL;
+        }
+        schedule_next_idle_antic();
+    }
+
+    /* Mid-sentence the lip sync owns the mouth; it settles when speech ends. */
+    if (!s_speaking) {
+        return_to_resting_emotion(FACE_EXPRESSION_TRANSITION_MS);
+    }
+    ESP_LOGI(TAG, "Face %s", muted ? "muted" : "unmuted");
+}
+
+bool face_animator_is_muted(void)
+{
+    return s_muted;
 }
 
 void face_animator_notice_activity(void)

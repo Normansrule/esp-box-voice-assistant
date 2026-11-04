@@ -41,6 +41,7 @@
 #include "buddy_timer.h"
 #include "esp_timer.h"
 #include "face_emotions.h"
+#include "face_mood.h"
 #include "face_pose.h"
 #include "voice_commands.h"
 #include "voice_math.h"
@@ -196,6 +197,12 @@ TEST(emotion_names_round_trip_and_ignore_case)
         const char *name = face_emotion_get_name((face_emotion_t)i);
 
         face_emotion_t parsed;
+        if (face_emotion_is_status_only((face_emotion_t)i)) {
+            /* A cloud reply must not be able to fake "muted". */
+            CHECK_MSG(!face_emotion_from_name(name, strlen(name), &parsed),
+                      "status-only \"%s\" parsed from a name", name);
+            continue;
+        }
         CHECK_MSG(face_emotion_from_name(name, strlen(name), &parsed),
                   "\"%s\" did not parse back", name);
         CHECK_MSG(parsed == (face_emotion_t)i, "\"%s\" parsed to the wrong mood", name);
@@ -386,6 +393,141 @@ TEST(antics_end_by_settling_down)
         CHECK_MSG(last->look_x == 0 && last->look_y == 0,
                   "antic \"%s\" ends still looking away", antic->name);
     }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Face marks, mood drift and tickles                                        */
+/* ------------------------------------------------------------------------ */
+
+TEST(face_marks_belong_to_the_right_moods)
+{
+    for (int i = 0; i < FACE_EMOTION_COUNT; i++) {
+        const face_mark_t mark = face_emotion_get_mark((face_emotion_t)i);
+        CHECK_MSG(mark >= FACE_MARK_NONE && mark < FACE_MARK_COUNT,
+                  "\"%s\" has an out-of-range mark %d",
+                  face_emotion_get_name((face_emotion_t)i), (int)mark);
+    }
+
+    /* The zip means "the microphone is off" and must mean nothing else. */
+    for (int i = 0; i < FACE_EMOTION_COUNT; i++) {
+        if (face_emotion_get_mark((face_emotion_t)i) == FACE_MARK_ZIP) {
+            CHECK_MSG(face_emotion_is_status_only((face_emotion_t)i),
+                      "\"%s\" wears the mute zip but is not status-only",
+                      face_emotion_get_name((face_emotion_t)i));
+        }
+    }
+    CHECK(face_emotion_get_mark(FACE_EMOTION_MUTED) == FACE_MARK_ZIP);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_ASLEEP) == FACE_MARK_SLEEP);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_NEUTRAL) == FACE_MARK_NONE);
+    CHECK(face_emotion_get_mark((face_emotion_t)-1) == FACE_MARK_NONE);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_COUNT) == FACE_MARK_NONE);
+
+    /* The everyday faces stay clean - a mark on every face is just noise. */
+    CHECK(face_emotion_get_mark(FACE_EMOTION_HAPPY) == FACE_MARK_NONE);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_LISTENING) == FACE_MARK_NONE);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_SPEAKING) == FACE_MARK_NONE);
+}
+
+TEST(the_muted_face_reads_as_not_listening)
+{
+    const face_pose_t *muted = face_emotion_get_pose(FACE_EMOTION_MUTED);
+    CHECK_MSG(muted->mouth_open_height == 0, "the muted face has its mouth open");
+    CHECK_MSG(muted->mouth_curve == 0, "the muted mouth should be a flat line");
+    CHECK_MSG(!muted->left_eye_shut && !muted->right_eye_shut,
+              "the muted face has its eyes shut - that reads as asleep, not muted");
+    CHECK(face_emotion_is_status_only(FACE_EMOTION_MUTED));
+    CHECK(!face_emotion_is_status_only(FACE_EMOTION_HAPPY));
+}
+
+TEST(moods_fade_then_the_buddy_dozes_off)
+{
+    const uint32_t minute = 60u * 1000u;
+
+    /* A fresh reaction stays put for a while... */
+    CHECK(face_mood_idle_drift(FACE_EMOTION_SAD, 1000) == FACE_EMOTION_SAD);
+    CHECK(face_mood_idle_drift(FACE_EMOTION_SAD, FACE_MOOD_FADE_AFTER_MS - 1) == FACE_EMOTION_SAD);
+    /* ...then relaxes. */
+    CHECK(face_mood_idle_drift(FACE_EMOTION_SAD, FACE_MOOD_FADE_AFTER_MS) == FACE_EMOTION_NEUTRAL);
+    CHECK(face_mood_idle_drift(FACE_EMOTION_NEUTRAL, FACE_MOOD_FADE_AFTER_MS) == FACE_EMOTION_NEUTRAL);
+
+    CHECK(face_mood_idle_drift(FACE_EMOTION_HAPPY, FACE_SLEEPY_AFTER_MINUTES * minute)
+          == FACE_EMOTION_SLEEPY);
+    CHECK(face_mood_idle_drift(FACE_EMOTION_SLEEPY, FACE_ASLEEP_AFTER_MINUTES * minute)
+          == FACE_EMOTION_ASLEEP);
+    CHECK(face_mood_idle_drift(FACE_EMOTION_ASLEEP, UINT32_MAX) == FACE_EMOTION_ASLEEP);
+
+    /* Already asleep never drifts back up to merely sleepy. */
+    CHECK(face_mood_idle_drift(FACE_EMOTION_ASLEEP, FACE_SLEEPY_AFTER_MINUTES * minute)
+          == FACE_EMOTION_ASLEEP);
+    /* Sleepy does not "fade" to neutral just because a minute passed. */
+    CHECK(face_mood_idle_drift(FACE_EMOTION_SLEEPY, FACE_MOOD_FADE_AFTER_MS)
+          == FACE_EMOTION_SLEEPY);
+
+    CHECK_MSG(FACE_ASLEEP_AFTER_MINUTES > FACE_SLEEPY_AFTER_MINUTES,
+              "asleep has to come after sleepy");
+    CHECK_MSG((uint32_t)FACE_MOOD_FADE_AFTER_MS < FACE_SLEEPY_AFTER_MINUTES * minute,
+              "a mood should fade before the buddy gets sleepy");
+}
+
+TEST(device_state_faces_never_drift)
+{
+    /* These report what the device is doing; time alone must not change them. */
+    const face_emotion_t owned[] = { FACE_EMOTION_LISTENING, FACE_EMOTION_THINKING,
+                                     FACE_EMOTION_SPEAKING, FACE_EMOTION_MUTED };
+    for (size_t i = 0; i < sizeof(owned) / sizeof(owned[0]); i++) {
+        CHECK_MSG(face_mood_idle_drift(owned[i], UINT32_MAX) == owned[i],
+                  "\"%s\" drifted on its own", face_emotion_get_name(owned[i]));
+    }
+    CHECK(face_mood_idle_drift((face_emotion_t)-1, 0) == FACE_EMOTION_NEUTRAL);
+    CHECK(face_mood_idle_drift(FACE_EMOTION_COUNT, 0) == FACE_EMOTION_NEUTRAL);
+}
+
+TEST(a_run_of_quick_taps_is_a_tickle)
+{
+    face_tickle_t t = { 0 };
+    uint32_t now = 5000;
+
+    CHECK(face_tickle_register(&t, now) == FACE_TICKLE_POKE);
+    now += 300;
+    CHECK(face_tickle_register(&t, now) == FACE_TICKLE_POKE);
+    for (int tap = FACE_TICKLE_GIGGLE_TAPS; tap < FACE_TICKLE_ENOUGH_TAPS; tap++) {
+        now += 300;
+        CHECK_MSG(face_tickle_register(&t, now) == FACE_TICKLE_GIGGLE,
+                  "tap %d of a streak did not giggle", tap);
+    }
+    now += 300;
+    CHECK(face_tickle_register(&t, now) == FACE_TICKLE_ENOUGH);
+
+    /* After "enough" the streak starts over. */
+    now += 300;
+    CHECK(face_tickle_register(&t, now) == FACE_TICKLE_POKE);
+}
+
+TEST(slow_taps_are_just_pokes)
+{
+    face_tickle_t t = { 0 };
+    uint32_t now = 0;
+    for (int i = 0; i < 20; i++) {
+        now += FACE_TICKLE_GAP_MS + 1;
+        CHECK_MSG(face_tickle_register(&t, now) == FACE_TICKLE_POKE,
+                  "slow tap %d counted as a tickle", i);
+    }
+
+    /* A streak straddling the 32-bit millisecond wrap still counts. */
+    face_tickle_t w = { 0 };
+    CHECK(face_tickle_register(&w, UINT32_MAX - 200) == FACE_TICKLE_POKE);
+    CHECK(face_tickle_register(&w, UINT32_MAX - 10) == FACE_TICKLE_POKE);
+    CHECK(face_tickle_register(&w, 150) == FACE_TICKLE_GIGGLE);
+
+    CHECK(face_tickle_register(NULL, 0) == FACE_TICKLE_POKE);
+}
+
+TEST(the_named_antics_the_firmware_asks_for_exist)
+{
+    CHECK(face_antic_find("giggle fit") >= 0);
+    CHECK(face_antic_find("yawn") >= 0);
+    CHECK(face_antic_find("no such antic") == -1);
+    CHECK(face_antic_find(NULL) == -1);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -2967,6 +3109,15 @@ int main(void)
     run_there_are_antics_and_they_are_reachable();
     run_every_antic_step_is_valid_and_sanely_timed();
     run_antics_end_by_settling_down();
+
+    printf("\nFace marks, mood drift and tickles\n");
+    run_face_marks_belong_to_the_right_moods();
+    run_the_muted_face_reads_as_not_listening();
+    run_moods_fade_then_the_buddy_dozes_off();
+    run_device_state_faces_never_drift();
+    run_a_run_of_quick_taps_is_a_tickle();
+    run_slow_taps_are_just_pokes();
+    run_the_named_antics_the_firmware_asks_for_exist();
 
     printf("\nThe voice vocabulary\n");
     run_the_command_table_is_addressable();

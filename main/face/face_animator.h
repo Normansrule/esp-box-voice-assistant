@@ -91,6 +91,21 @@ void face_animator_set_speaking(bool speaking);
 void face_animator_set_idle_antics_enabled(bool enabled);
 
 /**
+ * @brief Show (or stop showing) that the microphone is muted.
+ *
+ * While muted the face rests in FACE_EMOTION_MUTED - soft eyes, stitched
+ * mouth - whatever mood was last set, and idle and tap antics are held off
+ * so the indicator never flickers away. Brief reactions (a flash) still play
+ * and then return to it. Driven by the physical mute switch only.
+ */
+void face_animator_set_muted(bool muted);
+
+/**
+ * @brief Whether the face is currently showing the muted state.
+ */
+bool face_animator_is_muted(void);
+
+/**
  * @brief Tell the animator that a human interacted, so it should wake up.
  *
  * Resets the "how long have I been ignored" timer that eventually makes the

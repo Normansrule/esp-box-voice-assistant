@@ -93,7 +93,7 @@ Labels follow [docs/ROADMAP.md](docs/ROADMAP.md). A feature moves to **VERIFIED 
 | Face: 48 expressions, 12 idle antics, blink, lip sync | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `main/face/` |
 | Wake word and 147 offline phrases (ESP-SR WakeNet + MultiNet) | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `main/voice/` |
 | 393 offline voice clips | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `spiffs/voice/` |
-| Mute switch stops capture (no on-screen indicator yet) | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `hw_microphone.c` |
+| Mute switch stops capture; muted face and caption on screen | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `hw_microphone.c` |
 | Temperature, humidity, presence (BOX-3-SENSOR dock) | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `hw_sensors.c` |
 | Battery voltage on the dock (GPIO10, ÷4.01), **estimated** percent, low warning | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `hw_battery.c`; divider from Espressif's SENSOR-01 V1.1 schematic. [Test it](docs/HARDWARE_TESTS.md) |
 | Motion (ICM-42607-P): eyes follow tilt, shake → dizzy, pick up → surprised | ![UNTESTED ON DEVICE](https://img.shields.io/badge/-UNTESTED%20ON%20DEVICE-8A5A00?style=flat-square) | `hw_imu.c`, `buddy_motion.c`. [Test it](docs/HARDWARE_TESTS.md) |
@@ -130,7 +130,7 @@ sequenceDiagram
     end
 ```
 
-The mute switch on top stops capture in `hw_microphone.c`, so the wake word never reaches WakeNet. Firmware v3.7.1 has no on-screen mute indicator yet, and the simulator does not invent one.
+The mute switch on top stops capture in `hw_microphone.c`, so the wake word never reaches WakeNet. While muted the face shows soft eyes and stitched lips with a caption, and holds still until the switch goes back. A cloud reply cannot set that face.
 
 ### What the simulator reuses from the firmware
 
