@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · Beginner guide and secure development
+
+- New [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md): install, build, find the port, flash, recover and change the code on Windows, macOS and Linux, with official download links, a troubleshooting section and accessibility notes. macOS and non-Ubuntu Linux steps follow Espressif's v5.5.5 instructions and are **not yet walked through** for this project.
+- New [docs/GITHUB_SECURITY.md](docs/GITHUB_SECURITY.md): account and repository settings checklist (2FA, secret scanning, push protection, Dependabot, rulesets, Actions permissions).
+- `scripts/check_secrets.py` (standard library only) replaces the inline `git grep` secret checks in CI and the release workflow. It no longer mistakes words like `desk-buddy` for `sk-` keys, also catches GitHub/AWS/Google/Slack tokens, private keys and Wi-Fi passwords, and refuses files such as `sdkconfig` and `.env`. Tests in `tests/test_check_secrets.py`.
+- `.githooks/pre-commit` runs the same check before every commit (`git config core.hooksPath .githooks`); `.pre-commit-config.yaml` for pre-commit.com users.
+- `.gitignore` covers `sdkconfig.*` variants, loose firmware images, ELF/map files, more key formats, flash-encryption and signing keys, and virtualenvs.
+- `.github/dependabot.yml` for GitHub Actions and the desktop app's npm packages.
+
 ## Unreleased · More offline phrases
 
 - 20 new offline phrases (127 to 147 English), kept under the ~150 internal-RAM ceiling agreed with the boot-memory work: new wordings for time, date, jokes, volume, goodbyes, thanks, compliments and cheering up, plus timers for three and fifteen minutes.

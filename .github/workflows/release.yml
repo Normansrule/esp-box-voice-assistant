@@ -25,8 +25,8 @@ jobs:
       - name: No secrets in the source
         shell: bash
         run: |
-          test ! -e spiffs/openai_key.txt
-          ! git -c safe.directory='*' grep -nE '(^|[^A-Za-z0-9_-])sk-(proj-)?[A-Za-z0-9_-]{20,}' -- ':!*.lock'
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 scripts/check_secrets.py
       - name: Build
         shell: bash
         run: |

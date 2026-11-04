@@ -108,6 +108,8 @@ No affiliate tags are set, so these links earn nothing. Tags live in one place, 
 
 ## Build and flash
 
+**New to this?** [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) is a step-by-step guide for Windows, macOS and Linux: downloads, finding the port, flashing, recovery, changing the code safely, and fixes for common errors.
+
 Requires **ESP-IDF v5.5.x**. Not v6: it removed the legacy I2C driver the sensor-dock support uses. Keep the clone path free of spaces (ESP-SR passes library paths to the linker unquoted).
 
 Windows, from the **ESP-IDF 5.5 CMD** shortcut:

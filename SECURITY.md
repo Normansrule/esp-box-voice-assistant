@@ -18,6 +18,12 @@ Open a private security advisory on GitHub (Security → Report a vulnerability)
 - The boot log prints the key length, never the key.
 - Planned: replace the device-held key with a user-owned backend so no service secret lives on the device.
 
+## Developing safely
+
+- Turn on the pre-commit secret check once per clone: `git config core.hooksPath .githooks`. It runs `scripts/check_secrets.py --staged`; CI and the release workflow run the same script on every tracked file.
+- Repository and account settings (2FA, secret scanning, push protection, Dependabot, rulesets): [docs/GITHUB_SECURITY.md](docs/GITHUB_SECURITY.md).
+- Do not share your `build/` folder, self-built images or flash dumps: they can contain your API key and Wi-Fi password.
+
 ## Not yet in place
 
 Flash encryption, secure boot and signed OTA are not enabled by this repository's `sdkconfig.defaults`. Enable them before deploying devices you do not physically control.
