@@ -1,0 +1,14 @@
+# Keeps the GitHub Actions used by CI up to date and opens PRs for security
+# fixes. ESP-IDF components (idf_component.yml) are not an ecosystem Dependabot
+# understands, so those stay pinned by dependencies.lock and are updated by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /desktop
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
