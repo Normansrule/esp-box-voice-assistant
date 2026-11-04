@@ -22,7 +22,7 @@ jobs:
           idf.py set-target esp32s3
           idf.py build
           idf.py size
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: firmware-esp32s3
           path: |
