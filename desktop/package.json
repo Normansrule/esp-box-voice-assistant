@@ -15,7 +15,7 @@
     "dist:win": "node scripts/prepare.mjs && electron-builder --win nsis portable --x64 --publish never"
   },
   "dependencies": {
-    "esptool-js": "0.7.0"
+    "esptool-js": "0.7.1"
   },
   "devDependencies": {
     "electron": "44.5.1",
