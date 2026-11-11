@@ -51,6 +51,7 @@
 #include "voice_box_context.h"
 #include "voice_speech_gate.h"
 #include "voice_speech_parts.h"
+#include "ui_status_logic.h"
 
 /* ------------------------------------------------------------------------ */
 /* A very small test harness                                                 */
@@ -426,6 +427,81 @@ TEST(face_marks_belong_to_the_right_moods)
     CHECK(face_emotion_get_mark(FACE_EMOTION_HAPPY) == FACE_MARK_NONE);
     CHECK(face_emotion_get_mark(FACE_EMOTION_LISTENING) == FACE_MARK_NONE);
     CHECK(face_emotion_get_mark(FACE_EMOTION_SPEAKING) == FACE_MARK_NONE);
+}
+
+TEST(the_v39_faces_wear_their_marks)
+{
+    CHECK(face_emotion_get_mark(FACE_EMOTION_ANGRY) == FACE_MARK_ANGER);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_SINGING) == FACE_MARK_MUSIC);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_STARRY) == FACE_MARK_SPARKLE);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_CRYING) == FACE_MARK_TEAR);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_GRATEFUL) == FACE_MARK_HEART);
+    CHECK(face_emotion_get_mark(FACE_EMOTION_LAUGHING) == FACE_MARK_NONE);
+
+    /* The new names reach the cloud parser, and none of them is status-only. */
+    static const char *const names[] = { "angry", "laughing", "crying",
+                                         "worried", "grateful", "embarrassed" };
+    for (size_t i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+        face_emotion_t parsed;
+        CHECK_MSG(face_emotion_from_name(names[i], strlen(names[i]), &parsed),
+                  "\"%s\" does not parse", names[i]);
+        CHECK(!face_emotion_is_status_only(parsed));
+        CHECK(strcmp(face_emotion_get_name(parsed), names[i]) == 0);
+    }
+
+    /* Every new antic is reachable by name. */
+    CHECK(face_antic_find("big laugh") >= 0);
+    CHECK(face_antic_find("grumble") >= 0);
+    CHECK(face_antic_find("caught staring") >= 0);
+}
+
+TEST(the_status_chip_puts_mute_first)
+{
+    ui_status_inputs_t in = { .muted = true, .listening = true, .online_busy = true,
+                              .clock_valid = true, .clock_enabled = true };
+    CHECK(ui_status_pick(&in) == UI_STATUS_MIC_OFF);
+    in.muted = false;
+    CHECK(ui_status_pick(&in) == UI_STATUS_LISTENING);
+    in.listening = false;
+    CHECK(ui_status_pick(&in) == UI_STATUS_ONLINE);
+    in.online_busy = false;
+    CHECK(ui_status_pick(&in) == UI_STATUS_CLOCK);
+    in.clock_enabled = false;
+    CHECK(ui_status_pick(&in) == UI_STATUS_HIDDEN);
+    in.clock_enabled = true;
+    in.clock_valid = false;   /* Never show an unsynced, wrong time. */
+    CHECK(ui_status_pick(&in) == UI_STATUS_HIDDEN);
+    CHECK(ui_status_pick(NULL) == UI_STATUS_HIDDEN);
+}
+
+TEST(the_listening_meter_follows_loudness)
+{
+    CHECK(ui_status_level_bars(0) == 0);
+    CHECK(ui_status_level_bars(399) == 0);
+    CHECK(ui_status_level_bars(400) == 1);
+    CHECK(ui_status_level_bars(3000) == 3);
+    CHECK(ui_status_level_bars(32767) == UI_STATUS_LEVEL_BARS);
+    uint8_t last = 0;
+    for (uint32_t p = 0; p <= 32767; p += 97) {
+        const uint8_t bars = ui_status_level_bars((uint16_t)p);
+        CHECK_MSG(bars >= last, "meter went down as the level went up at %u", (unsigned)p);
+        last = bars;
+    }
+}
+
+TEST(the_status_clock_reads_like_a_clock)
+{
+    char t[8];
+    ui_status_format_clock(0, 5, t, sizeof(t));
+    CHECK(strcmp(t, "12:05") == 0);
+    ui_status_format_clock(9, 7, t, sizeof(t));
+    CHECK(strcmp(t, "9:07") == 0);
+    ui_status_format_clock(23, 59, t, sizeof(t));
+    CHECK(strcmp(t, "11:59") == 0);
+    ui_status_format_clock(24, 0, t, sizeof(t));
+    CHECK(strcmp(t, "--:--") == 0);
+    ui_status_format_clock(12, 60, t, sizeof(t));
+    CHECK(strcmp(t, "--:--") == 0);
 }
 
 TEST(the_muted_face_reads_as_not_listening)
@@ -3112,6 +3188,10 @@ int main(void)
 
     printf("\nFace marks, mood drift and tickles\n");
     run_face_marks_belong_to_the_right_moods();
+    run_the_v39_faces_wear_their_marks();
+    run_the_status_chip_puts_mute_first();
+    run_the_listening_meter_follows_loudness();
+    run_the_status_clock_reads_like_a_clock();
     run_the_muted_face_reads_as_not_listening();
     run_moods_fade_then_the_buddy_dozes_off();
     run_device_state_faces_never_drift();

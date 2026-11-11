@@ -72,6 +72,13 @@ typedef enum {
     FACE_EMOTION_FOCUSED,       /*!< Narrow eyes locked forward, brows level    */
     FACE_EMOTION_PLAYFUL,       /*!< Wide grin, one brow up, head tilted by an offset */
     FACE_EMOTION_EXHAUSTED,     /*!< Lids heavy, brows sagging, mouth slack     */
+    /* Added in v3.9. */
+    FACE_EMOTION_ANGRY,         /*!< Narrow eyes, brows slammed down, hard frown, vein mark */
+    FACE_EMOTION_LAUGHING,      /*!< Eyes squeezed into arcs, huge open grin, bouncing */
+    FACE_EMOTION_CRYING,        /*!< Eyes screwed shut, wailing mouth, tear     */
+    FACE_EMOTION_WORRIED,       /*!< Inner brows up, small frown, glancing away, sweat */
+    FACE_EMOTION_GRATEFUL,      /*!< Soft arc eyes, a little bow, warm smile, heart */
+    FACE_EMOTION_EMBARRASSED,   /*!< Full blush, eyes darting down and away, sweat */
     /* Added in v3.8. */
     FACE_EMOTION_MUTED,         /*!< Eyes soft, lips zipped: the mute switch is ON.
                                      STATUS ONLY - never parsed from a cloud reply */
@@ -102,6 +109,10 @@ typedef enum {
     FACE_MARK_EXCLAIM,      /*!< A "!" beside the right eye                        */
     FACE_MARK_HEART,        /*!< A small outlined heart beside the right eye       */
     FACE_MARK_ZIP,          /*!< Stitches across the mouth: microphone muted       */
+    /* Added in v3.9. */
+    FACE_MARK_MUSIC,        /*!< An eighth note beside the right eye: singing      */
+    FACE_MARK_SPARKLE,      /*!< A four-point twinkle beside the right eye         */
+    FACE_MARK_ANGER,        /*!< Two "popping vein" brackets beside the right eye  */
     FACE_MARK_COUNT,
 } face_mark_t;
 

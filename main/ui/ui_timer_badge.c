@@ -119,3 +119,8 @@ void ui_timer_badge_update(uint32_t seconds_left, bool running)
 
     hw_display_unlock();
 }
+
+lv_obj_t *ui_timer_badge_get_obj(void)
+{
+    return s_badge;
+}

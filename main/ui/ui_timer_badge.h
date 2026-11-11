@@ -44,6 +44,13 @@ esp_err_t ui_timer_badge_create(lv_obj_t *parent);
  */
 void ui_timer_badge_update(uint32_t seconds_left, bool running);
 
+/**
+ * @brief The badge widget, so neighbours can sit beside it. NULL before create.
+ *
+ * Call with the display lock held. Read its HIDDEN flag rather than caching it.
+ */
+lv_obj_t *ui_timer_badge_get_obj(void);
+
 #ifdef __cplusplus
 }
 #endif

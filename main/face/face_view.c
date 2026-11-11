@@ -119,6 +119,14 @@ static const lv_point_t s_pts_heart[]       = { {20, 38}, {7, 26}, {4, 17}, {7, 
                                                 {33, 26}, {20, 38} };
 static const lv_point_t s_pts_zip[]         = { {4, 12}, {13, 2}, {22, 22}, {31, 2},
                                                 {40, 22}, {49, 2}, {58, 12} };
+/* v3.9: an eighth note (stem and flag; the dot is the note head). */
+static const lv_point_t s_pts_music[]       = { {28, 33}, {28, 4}, {37, 11}, {37, 18} };
+/* v3.9: a four-point twinkle, outlined; the dot is a small second twinkle. */
+static const lv_point_t s_pts_sparkle[]     = { {18, 4}, {22, 16}, {34, 20}, {22, 24}, {18, 36},
+                                                {14, 24}, {2, 20}, {14, 16}, {18, 4} };
+/* v3.9: the cartoon "popping vein", as two opposite corner brackets. */
+static const lv_point_t s_pts_anger_a[]     = { {4, 16}, {15, 16}, {15, 5} };
+static const lv_point_t s_pts_anger_b[]     = { {25, 35}, {25, 24}, {36, 24} };
 
 #define PTS(a)      { (a), (uint8_t)(sizeof(a) / sizeof((a)[0])) }
 #define NO_STROKE   { NULL, 0 }
@@ -141,6 +149,12 @@ static const mark_spec_t s_mark_specs[FACE_MARK_COUNT] = {
                              { PTS(s_pts_heart), NO_STROKE }, NO_DOT, 3 },
     [FACE_MARK_ZIP]      = { MARK_AT_MOUTH, MARK_ZIP_W, MARK_ZIP_H, MARK_ZIP_STROKE,
                              { PTS(s_pts_zip), NO_STROKE }, NO_DOT, 0 },
+    [FACE_MARK_MUSIC]    = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_music), NO_STROKE }, { 16, 27, 30, 38 }, 5 },
+    [FACE_MARK_SPARKLE]  = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_sparkle), NO_STROKE }, { 31, 0, 37, 6 }, 3 },
+    [FACE_MARK_ANGER]    = { MARK_AT_SIDE, 40, 44, MARK_STROKE,
+                             { PTS(s_pts_anger_a), PTS(s_pts_anger_b) }, NO_DOT, 2 },
 };
 
 /* ------------------------------------------------------------------------ */

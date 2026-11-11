@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased · More faces and a live status chip
+
+- **Six new expressions**: angry, laughing, crying, worried, grateful and embarrassed (55 in total). Jokes now get a laugh, "thank you" gets grateful, compliments get embarrassed. The online brain may use `[laughing]`, `[worried]` and `[grateful]` too.
+- **Three new face marks**: a music note while singing, a twinkle for starry and amazed, and a "popping vein" for angry. Same two-strokes-and-a-dot budget as the others.
+- **Three new antics**: big laugh, grumble, caught staring.
+- **Status chip** in the free top-left corner (it docks beside the timer pill when a timer runs). It shows only real state: *Mic off* while the mute switch is on (always wins), a live five-bar microphone meter while listening, *Online* while a home or cloud request is out, and the time once the clock has synced over Wi-Fi. Nothing shows when there is nothing true to say. Switch it (or just the clock) off in `idf.py menuconfig` → Desk Buddy appearance.
+- The recorder exposes the live microphone peak for the meter (`voice_recorder_get_live_peak()`); the chip's decisions are host-tested.
+- **Untested on device.**
+
 ## Unreleased · More expressive face
 
 - **Face marks**: a floating "Z z" when asleep, a bead of sweat (nervous, exhausted on low battery), a tear (sad), "?" (confused), "!" (shocked when the timer ends, surprised when picked up), a heart (love). Built from two strokes and a dot each; no images, no fonts, no layer buffers.

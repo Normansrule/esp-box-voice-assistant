@@ -1287,6 +1287,168 @@
    }
   },
   {
+   "id": "angry",
+   "name": "angry",
+   "pose": {
+    "eye_width": 53,
+    "eye_height": 44,
+    "eye_corner_radius": 13,
+    "eye_lower_lid": 0,
+    "eye_upper_lid": 17,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": 8,
+    "brow_inner_tilt": 15,
+    "brow_spread": -5,
+    "brow_asymmetry": 0,
+    "brows_visible": true,
+    "mouth_width": 61,
+    "mouth_curve": -13,
+    "mouth_open_height": 0,
+    "mouth_offset_y": 1,
+    "blush_opacity": 0,
+    "look_x": 0,
+    "look_y": -4,
+    "face_offset_x": 0,
+    "face_offset_y": 1
+   }
+  },
+  {
+   "id": "laughing",
+   "name": "laughing",
+   "pose": {
+    "eye_width": 58,
+    "eye_height": 63,
+    "eye_corner_radius": 29,
+    "eye_lower_lid": 48,
+    "eye_upper_lid": 0,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": -10,
+    "brow_inner_tilt": -4,
+    "brow_spread": 1,
+    "brow_asymmetry": 0,
+    "brows_visible": true,
+    "mouth_width": 99,
+    "mouth_curve": 18,
+    "mouth_open_height": 32,
+    "mouth_offset_y": 0,
+    "blush_opacity": 220,
+    "look_x": 0,
+    "look_y": 6,
+    "face_offset_x": 0,
+    "face_offset_y": -6
+   }
+  },
+  {
+   "id": "crying",
+   "name": "crying",
+   "pose": {
+    "eye_width": 48,
+    "eye_height": 46,
+    "eye_corner_radius": 22,
+    "eye_lower_lid": 0,
+    "eye_upper_lid": 29,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": 1,
+    "brow_inner_tilt": -13,
+    "brow_spread": -3,
+    "brow_asymmetry": 0,
+    "brows_visible": true,
+    "mouth_width": 56,
+    "mouth_curve": -12,
+    "mouth_open_height": 18,
+    "mouth_offset_y": 5,
+    "blush_opacity": 90,
+    "look_x": 0,
+    "look_y": 12,
+    "face_offset_x": 0,
+    "face_offset_y": 3
+   }
+  },
+  {
+   "id": "worried",
+   "name": "worried",
+   "pose": {
+    "eye_width": 55,
+    "eye_height": 67,
+    "eye_corner_radius": 24,
+    "eye_lower_lid": 0,
+    "eye_upper_lid": 0,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": -5,
+    "brow_inner_tilt": -12,
+    "brow_spread": 1,
+    "brow_asymmetry": -2,
+    "brows_visible": true,
+    "mouth_width": 48,
+    "mouth_curve": -8,
+    "mouth_open_height": 0,
+    "mouth_offset_y": 3,
+    "blush_opacity": 0,
+    "look_x": -28,
+    "look_y": 14,
+    "face_offset_x": -1,
+    "face_offset_y": 0
+   }
+  },
+  {
+   "id": "grateful",
+   "name": "grateful",
+   "pose": {
+    "eye_width": 53,
+    "eye_height": 55,
+    "eye_corner_radius": 29,
+    "eye_lower_lid": 39,
+    "eye_upper_lid": 0,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": -5,
+    "brow_inner_tilt": -5,
+    "brow_spread": 0,
+    "brow_asymmetry": 0,
+    "brows_visible": true,
+    "mouth_width": 73,
+    "mouth_curve": 15,
+    "mouth_open_height": 0,
+    "mouth_offset_y": 0,
+    "blush_opacity": 200,
+    "look_x": 0,
+    "look_y": 14,
+    "face_offset_x": 0,
+    "face_offset_y": 3
+   }
+  },
+  {
+   "id": "embarrassed",
+   "name": "embarrassed",
+   "pose": {
+    "eye_width": 51,
+    "eye_height": 60,
+    "eye_corner_radius": 25,
+    "eye_lower_lid": 25,
+    "eye_upper_lid": 0,
+    "left_eye_shut": false,
+    "right_eye_shut": false,
+    "brow_offset_y": -6,
+    "brow_inner_tilt": -8,
+    "brow_spread": 0,
+    "brow_asymmetry": -3,
+    "brows_visible": true,
+    "mouth_width": 48,
+    "mouth_curve": 5,
+    "mouth_open_height": 0,
+    "mouth_offset_y": 2,
+    "blush_opacity": 255,
+    "look_x": 50,
+    "look_y": 34,
+    "face_offset_x": 3,
+    "face_offset_y": 1
+   }
+  },
+  {
    "id": "muted",
    "name": "muted",
    "pose": {
@@ -2001,6 +2163,138 @@
      "hold_ms": 0
     }
    ]
+  },
+  {
+   "name": "big laugh",
+   "steps": [
+    {
+     "emotion": "laughing",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": -7,
+     "transition_ms": 140,
+     "hold_ms": 120
+    },
+    {
+     "emotion": "laughing",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 2,
+     "transition_ms": 120,
+     "hold_ms": 120
+    },
+    {
+     "emotion": "laughing",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": -7,
+     "transition_ms": 120,
+     "hold_ms": 160
+    },
+    {
+     "emotion": "happy",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 240,
+     "hold_ms": 300
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 0
+    }
+   ]
+  },
+  {
+   "name": "grumble",
+   "steps": [
+    {
+     "emotion": "angry",
+     "look_x": 30,
+     "look_y": 0,
+     "face_offset_x": 2,
+     "face_offset_y": 0,
+     "transition_ms": 200,
+     "hold_ms": 600
+    },
+    {
+     "emotion": "annoyed",
+     "look_x": -20,
+     "look_y": 0,
+     "face_offset_x": -2,
+     "face_offset_y": 0,
+     "transition_ms": 220,
+     "hold_ms": 300
+    },
+    {
+     "emotion": "relieved",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 280,
+     "hold_ms": 400
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 0
+    }
+   ]
+  },
+  {
+   "name": "caught staring",
+   "steps": [
+    {
+     "emotion": "curious",
+     "look_x": 0,
+     "look_y": -10,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 220,
+     "hold_ms": 500
+    },
+    {
+     "emotion": "embarrassed",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 180,
+     "hold_ms": 800
+    },
+    {
+     "emotion": "shy",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 300
+    },
+    {
+     "emotion": "neutral",
+     "look_x": 0,
+     "look_y": 0,
+     "face_offset_x": 0,
+     "face_offset_y": 0,
+     "transition_ms": 260,
+     "hold_ms": 0
+    }
+   ]
   }
  ],
  "marks": {
@@ -2018,7 +2312,14 @@
    "shocked": "exclaim",
    "alarmed": "exclaim",
    "love": "heart",
-   "starry": "heart",
+   "grateful": "heart",
+   "starry": "sparkle",
+   "amazed": "sparkle",
+   "singing": "music",
+   "angry": "anger",
+   "crying": "tear",
+   "worried": "sweat",
+   "embarrassed": "sweat",
    "muted": "zip"
   },
   "specs": {
@@ -2319,6 +2620,148 @@
     ],
     "dot": null,
     "bob_px": 0
+   },
+   "music": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       28,
+       33
+      ],
+      [
+       28,
+       4
+      ],
+      [
+       37,
+       11
+      ],
+      [
+       37,
+       18
+      ]
+     ]
+    ],
+    "dot": [
+     16,
+     27,
+     15,
+     12
+    ],
+    "bob_px": 5
+   },
+   "sparkle": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       18,
+       4
+      ],
+      [
+       22,
+       16
+      ],
+      [
+       34,
+       20
+      ],
+      [
+       22,
+       24
+      ],
+      [
+       18,
+       36
+      ],
+      [
+       14,
+       24
+      ],
+      [
+       2,
+       20
+      ],
+      [
+       14,
+       16
+      ],
+      [
+       18,
+       4
+      ]
+     ]
+    ],
+    "dot": [
+     31,
+     0,
+     7,
+     7
+    ],
+    "bob_px": 3
+   },
+   "anger": {
+    "anchor": "side",
+    "origin": [
+     252,
+     60
+    ],
+    "box": [
+     40,
+     44
+    ],
+    "stroke_width": 5,
+    "strokes": [
+     [
+      [
+       4,
+       16
+      ],
+      [
+       15,
+       16
+      ],
+      [
+       15,
+       5
+      ]
+     ],
+     [
+      [
+       25,
+       35
+      ],
+      [
+       25,
+       24
+      ],
+      [
+       36,
+       24
+      ]
+     ]
+    ],
+    "dot": null,
+    "bob_px": 2
    }
   }
  },
@@ -3473,7 +3916,7 @@
    "runtime": true
   },
   "tell_joke": {
-   "emotion": "excited",
+   "emotion": "laughing",
    "antic": false,
    "lines": [
     {
@@ -3729,7 +4172,7 @@
    "runtime": false
   },
   "thank_you": {
-   "emotion": "love",
+   "emotion": "grateful",
    "antic": false,
    "lines": [
     {
@@ -3756,7 +4199,7 @@
    "runtime": false
   },
   "compliment": {
-   "emotion": "shy",
+   "emotion": "embarrassed",
    "antic": false,
    "lines": [
     {
