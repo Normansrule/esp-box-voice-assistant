@@ -101,6 +101,15 @@ float voice_recorder_get_speech_seconds(void);
 int32_t voice_recorder_get_peak_amplitude(void);
 
 /**
+ * @brief Peak of the latest audio chunk while recording, 0 otherwise.
+ *
+ * Drives the listening meter on the home screen. Safe to call from any task.
+ * It is a reading of the real microphone signal (after the audio front end),
+ * not an animation: silence shows as no bars.
+ */
+uint16_t voice_recorder_get_live_peak(void);
+
+/**
  * @brief Get the recording as a complete WAV file, header and all.
  *
  * The WAV header is written into the bytes reserved in front of the audio, so

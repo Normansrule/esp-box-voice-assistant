@@ -47,7 +47,7 @@ static const char *TAG = "cloud_brain";
 #define MOOD_TAG_INSTRUCTION \
     " Always begin your reply with a mood in square brackets, chosen from: " \
     "[happy] [excited] [curious] [surprised] [sad] [annoyed] [sleepy] [love] " \
-    "[confused] [neutral]. Then answer in at most two sentences and under 200 " \
+    "[confused] [laughing] [worried] [grateful] [neutral]. Then answer in at most two sentences and under 200 " \
     "characters — it is being read aloud by a palm-sized robot and shown on a " \
     "screen the size of a matchbox, so anything longer gets cut short."
 

@@ -665,6 +665,86 @@ static const face_pose_t s_emotion_poses[FACE_EMOTION_COUNT] = {
         .face_offset_x = 0,           .face_offset_y = S(4),
     },
 
+    /* ---- Added in v3.9 ------------------------------------------------- */
+
+    /* Past annoyed: brows slammed down at the middle, eyes narrowed to slits, a hard frown. */
+    [FACE_EMOTION_ANGRY] = {
+        .eye_width = S(EYE_W+2),    .eye_height = S(EYE_H-22),  .eye_corner_radius = S(EYE_R-10),
+        .eye_lower_lid = 0,             .eye_upper_lid = S(20),
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(10),      .brow_inner_tilt = S(18),    .brow_spread = S(-6),
+        .brow_asymmetry = S(0),      .brows_visible = true,
+        .mouth_width = S(MOUTH_W-24), .mouth_curve = S(-16),       .mouth_open_height = 0,
+        .mouth_offset_y = S(2),
+        .blush_opacity = 0,         .look_x = 0,                 .look_y = -4,
+        .face_offset_x = S(0),       .face_offset_y = S(2),
+    },
+
+    /* A proper laugh: eyes squeezed into arcs, the widest open grin, chin up. Bounced by the 'big laugh' antic. */
+    [FACE_EMOTION_LAUGHING] = {
+        .eye_width = S(EYE_W+8),    .eye_height = S(EYE_H+0),   .eye_corner_radius = S(EYE_R+8),
+        .eye_lower_lid = S(56),         .eye_upper_lid = 0,
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(-12),     .brow_inner_tilt = S(-5),    .brow_spread = S(2),
+        .brow_asymmetry = S(0),      .brows_visible = true,
+        .mouth_width = S(MOUTH_W+20), .mouth_curve = S(22),        .mouth_open_height = S(38),
+        .mouth_offset_y = S(0),
+        .blush_opacity = 220,       .look_x = 0,                 .look_y = 6,
+        .face_offset_x = S(0),       .face_offset_y = S(-8),
+    },
+
+    /* Eyes screwed shut from the top, brows crumpled up, a wailing open mouth and a tear. */
+    [FACE_EMOTION_CRYING] = {
+        .eye_width = S(EYE_W-4),    .eye_height = S(EYE_H-20),  .eye_corner_radius = S(EYE_R+0),
+        .eye_lower_lid = 0,             .eye_upper_lid = S(34),
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(2),       .brow_inner_tilt = S(-16),   .brow_spread = S(-4),
+        .brow_asymmetry = S(0),      .brows_visible = true,
+        .mouth_width = S(MOUTH_W-30), .mouth_curve = S(-14),       .mouth_open_height = S(22),
+        .mouth_offset_y = S(6),
+        .blush_opacity = 90,        .look_x = 0,                 .look_y = 12,
+        .face_offset_x = S(0),       .face_offset_y = S(4),
+    },
+
+    /* Quieter than nervous: inner brows up, a small frown, eyes sliding away, one bead of sweat. */
+    [FACE_EMOTION_WORRIED] = {
+        .eye_width = S(EYE_W+4),    .eye_height = S(EYE_H+4),   .eye_corner_radius = S(EYE_R+2),
+        .eye_lower_lid = 0,             .eye_upper_lid = 0,
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(-6),      .brow_inner_tilt = S(-14),   .brow_spread = S(2),
+        .brow_asymmetry = S(-3),     .brows_visible = true,
+        .mouth_width = S(MOUTH_W-40), .mouth_curve = S(-10),       .mouth_open_height = 0,
+        .mouth_offset_y = S(4),
+        .blush_opacity = 0,         .look_x = -28,               .look_y = 14,
+        .face_offset_x = S(-2),      .face_offset_y = S(0),
+    },
+
+    /* Soft arc eyes and a little bow of the head, warm smile and blush. Worn for 'thank you'. */
+    [FACE_EMOTION_GRATEFUL] = {
+        .eye_width = S(EYE_W+2),    .eye_height = S(EYE_H-10),  .eye_corner_radius = S(EYE_R+8),
+        .eye_lower_lid = S(46),         .eye_upper_lid = 0,
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(-6),      .brow_inner_tilt = S(-6),    .brow_spread = S(0),
+        .brow_asymmetry = S(0),      .brows_visible = true,
+        .mouth_width = S(MOUTH_W-10), .mouth_curve = S(18),        .mouth_open_height = 0,
+        .mouth_offset_y = S(0),
+        .blush_opacity = 200,       .look_x = 0,                 .look_y = 14,
+        .face_offset_x = S(0),       .face_offset_y = S(4),
+    },
+
+    /* Blushing as hard as it can, eyes darting down and away, a wobbly little smile and sweat. */
+    [FACE_EMOTION_EMBARRASSED] = {
+        .eye_width = S(EYE_W+0),    .eye_height = S(EYE_H-4),   .eye_corner_radius = S(EYE_R+4),
+        .eye_lower_lid = S(30),         .eye_upper_lid = 0,
+        .left_eye_shut = false,       .right_eye_shut = false,
+        .brow_offset_y = S(-8),      .brow_inner_tilt = S(-10),   .brow_spread = S(0),
+        .brow_asymmetry = S(-4),     .brows_visible = true,
+        .mouth_width = S(MOUTH_W-40), .mouth_curve = S(6),         .mouth_open_height = 0,
+        .mouth_offset_y = S(3),
+        .blush_opacity = 255,       .look_x = 50,                .look_y = 34,
+        .face_offset_x = S(4),       .face_offset_y = S(2),
+    },
+
     /*
      * The mute switch is on. Calm and a little withdrawn rather than sad: the
      * eyes soften and drop, the mouth narrows to a flat line and FACE_MARK_ZIP
@@ -767,6 +847,12 @@ static const char *const s_emotion_names[FACE_EMOTION_COUNT] = {
     [FACE_EMOTION_FOCUSED]    = "focused",
     [FACE_EMOTION_PLAYFUL]    = "playful",
     [FACE_EMOTION_EXHAUSTED]  = "exhausted",
+    [FACE_EMOTION_ANGRY]       = "angry",
+    [FACE_EMOTION_LAUGHING]    = "laughing",
+    [FACE_EMOTION_CRYING]      = "crying",
+    [FACE_EMOTION_WORRIED]     = "worried",
+    [FACE_EMOTION_GRATEFUL]    = "grateful",
+    [FACE_EMOTION_EMBARRASSED] = "embarrassed",
     [FACE_EMOTION_MUTED]      = "muted",
     [FACE_EMOTION_LISTENING] = "listening",
     [FACE_EMOTION_THINKING]  = "thinking",
@@ -796,7 +882,14 @@ static const uint8_t s_emotion_marks[FACE_EMOTION_COUNT] = {
     [FACE_EMOTION_SHOCKED]    = FACE_MARK_EXCLAIM,
     [FACE_EMOTION_ALARMED]    = FACE_MARK_EXCLAIM,
     [FACE_EMOTION_LOVE]       = FACE_MARK_HEART,
-    [FACE_EMOTION_STARRY]     = FACE_MARK_HEART,
+    [FACE_EMOTION_GRATEFUL]   = FACE_MARK_HEART,
+    [FACE_EMOTION_STARRY]     = FACE_MARK_SPARKLE,
+    [FACE_EMOTION_AMAZED]     = FACE_MARK_SPARKLE,
+    [FACE_EMOTION_SINGING]    = FACE_MARK_MUSIC,
+    [FACE_EMOTION_ANGRY]      = FACE_MARK_ANGER,
+    [FACE_EMOTION_CRYING]     = FACE_MARK_TEAR,
+    [FACE_EMOTION_WORRIED]    = FACE_MARK_SWEAT,
+    [FACE_EMOTION_EMBARRASSED] = FACE_MARK_SWEAT,
     [FACE_EMOTION_MUTED]      = FACE_MARK_ZIP,
 };
 
@@ -971,6 +1064,31 @@ static const face_antic_step_t s_antic_giggle_fit[] = {
     { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
 };
 
+/* Breaks up laughing at its own joke, with a couple of bounces. */
+static const face_antic_step_t s_antic_big_laugh[] = {
+    { FACE_EMOTION_LAUGHING,   0,   0,  0, -7, 140,  120 },
+    { FACE_EMOTION_LAUGHING,   0,   0,  0,  2, 120,  120 },
+    { FACE_EMOTION_LAUGHING,   0,   0,  0, -7, 120,  160 },
+    { FACE_EMOTION_HAPPY,      0,   0,  0,  0, 240,  300 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
+};
+
+/* A tiny grumble: glares, huffs, then lets it go. */
+static const face_antic_step_t s_antic_grumble[] = {
+    { FACE_EMOTION_ANGRY,     30,   0,  2,  0, 200,  600 },
+    { FACE_EMOTION_ANNOYED,  -20,   0, -2,  0, 220,  300 },
+    { FACE_EMOTION_RELIEVED,   0,   0,  0,  0, 280,  400 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
+};
+
+/* Caught being stared at: goes red, looks away, smiles sheepishly. */
+static const face_antic_step_t s_antic_caught_staring[] = {
+    { FACE_EMOTION_CURIOUS,    0, -10,  0,  0, 220,  500 },
+    { FACE_EMOTION_EMBARRASSED, 0,  0,  0,  0, 180,  800 },
+    { FACE_EMOTION_SHY,        0,   0,  0,  0, 260,  300 },
+    { FACE_EMOTION_NEUTRAL,    0,   0,  0,  0, 260,    0 },
+};
+
 /* Convenience macro so the registry below stays one readable line per antic. */
 #define ANTIC_ENTRY(display_name, step_array) \
     { .name = (display_name), .steps = (step_array), \
@@ -996,6 +1114,9 @@ static const face_antic_t s_antics[] = {
     ANTIC_ENTRY("daydream",      s_antic_daydream),
     ANTIC_ENTRY("aha",           s_antic_aha),
     ANTIC_ENTRY("giggle fit",    s_antic_giggle_fit),
+    ANTIC_ENTRY("big laugh",     s_antic_big_laugh),
+    ANTIC_ENTRY("grumble",       s_antic_grumble),
+    ANTIC_ENTRY("caught staring", s_antic_caught_staring),
 };
 
 uint8_t face_antic_get_count(void)

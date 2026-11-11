@@ -24,6 +24,7 @@
 #include "ui_sensor_readout.h"
 #include "ui_settings.h"
 #include "ui_speech_bubble.h"
+#include "ui_status_chip.h"
 #include "ui_timer_badge.h"
 
 static const char *TAG = "ui_face";
@@ -158,6 +159,7 @@ esp_err_t ui_screen_face_create(void)
     ui_sensor_readout_create(screen);
     ui_speech_bubble_create(screen);
     ui_timer_badge_create(screen);
+    ui_status_chip_create(screen);   /* After the timer: it docks beside it. */
     ui_settings_create_button(screen);
 
     /* Taps anywhere unclaimed reach the screen and make the buddy react. */

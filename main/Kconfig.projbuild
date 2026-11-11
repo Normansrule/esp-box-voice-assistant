@@ -22,4 +22,22 @@ menu "Desk Buddy appearance"
             Captions appear and disappear without sliding or fading.
             The face itself still blinks and changes expression.
 
+    config BUDDY_UI_STATUS_CHIP
+        bool "Show the status chip (clock, listening meter, online, mic off)"
+        default y
+        help
+            A small chip in the top-left corner that reports what the box is
+            really doing: the microphone switch is off, it is listening (with
+            a live level meter), a request to the home or cloud brain is out,
+            or, when nothing is happening, the time once the clock has synced
+            over Wi-Fi. With this off, mute is still shown on the face.
+
+    config BUDDY_UI_STATUS_CLOCK
+        bool "Show the time in the status chip when idle"
+        default y
+        depends on BUDDY_UI_STATUS_CHIP
+        help
+            Only shown once the clock has synced (net_time). Before that the
+            chip stays hidden rather than showing a wrong time.
+
 endmenu
