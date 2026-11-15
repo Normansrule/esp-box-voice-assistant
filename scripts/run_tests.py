@@ -59,6 +59,7 @@ SOURCES_UNDER_TEST = [
     os.path.join(MAIN_DIR, "voice", "voice_speech_gate.c"),
     os.path.join(MAIN_DIR, "voice", "voice_router.c"),
     os.path.join(MAIN_DIR, "ui", "ui_status_logic.c"),
+    os.path.join(MAIN_DIR, "ui", "ui_glance_logic.c"),
     os.path.join(MAIN_DIR, "voice", "voice_box_context.c"),
 ]
 

@@ -52,6 +52,7 @@
 #include "voice_speech_gate.h"
 #include "voice_speech_parts.h"
 #include "ui_status_logic.h"
+#include "ui_glance_logic.h"
 
 /* ------------------------------------------------------------------------ */
 /* A very small test harness                                                 */
@@ -502,6 +503,57 @@ TEST(the_status_clock_reads_like_a_clock)
     CHECK(strcmp(t, "--:--") == 0);
     ui_status_format_clock(12, 60, t, sizeof(t));
     CHECK(strcmp(t, "--:--") == 0);
+}
+
+TEST(the_glance_page_never_invents_a_reading)
+{
+    ui_glance_tile_t t;
+
+    ui_glance_temperature(false, 21.0f, false, &t);
+    CHECK(strcmp(t.value, "--") == 0);
+    ui_glance_temperature(true, 21.4f, false, &t);
+    CHECK_MSG(strcmp(t.value, "21°C") == 0, "got %s", t.value);
+    ui_glance_temperature(true, 21.0f, true, &t);
+    CHECK_MSG(strcmp(t.value, "70°F") == 0, "got %s", t.value);
+    ui_glance_temperature(true, -3.6f, false, &t);
+    CHECK_MSG(strcmp(t.value, "-4°C") == 0, "got %s", t.value);
+    ui_glance_temperature(true, 500.0f, false, &t);   /* A broken sensor, not a fire. */
+    CHECK(strcmp(t.value, "--") == 0);
+
+    ui_glance_humidity(false, 40.0f, &t);
+    CHECK(strcmp(t.value, "--") == 0);
+    ui_glance_humidity(true, 45.5f, &t);
+    CHECK_MSG(strcmp(t.value, "46%") == 0, "got %s", t.value);
+    ui_glance_humidity(true, 104.0f, &t);
+    CHECK(strcmp(t.value, "100%") == 0);
+
+    /* The battery figure is always marked as an estimate. */
+    ui_glance_battery(true, true, 89, false, &t);
+    CHECK(strcmp(t.value, "~89%") == 0);
+    CHECK(strstr(t.caption, "est") != NULL);
+    ui_glance_battery(true, true, 8, true, &t);
+    CHECK(strcmp(t.caption, "Battery low") == 0);
+    ui_glance_battery(true, false, 0, false, &t);
+    CHECK(strcmp(t.value, "--") == 0 && strcmp(t.caption, "No cell") == 0);
+    ui_glance_battery(false, false, 0, false, &t);
+    CHECK(strcmp(t.value, "--") == 0 && strcmp(t.caption, "No dock") == 0);
+
+    /* The value font only has these glyphs; anything else would draw as a box. */
+    const char *allowed = "0123456789:-%~.CF";
+    const ui_glance_tile_t *samples[] = { &t };
+    (void)samples;
+    float temps[] = { -40.0f, 0.0f, 37.5f, 99.9f };
+    for (size_t i = 0; i < sizeof(temps) / sizeof(temps[0]); i++) {
+        for (int f = 0; f < 2; f++) {
+            ui_glance_temperature(true, temps[i], f != 0, &t);
+            for (const unsigned char *c = (const unsigned char *)t.value; *c; c++) {
+                if (*c >= 0x80) {
+                    continue;   /* The UTF-8 bytes of the degree sign. */
+                }
+                CHECK_MSG(strchr(allowed, *c) != NULL, "glyph '%c' is not in the value font", *c);
+            }
+        }
+    }
 }
 
 TEST(the_muted_face_reads_as_not_listening)
@@ -3192,6 +3244,7 @@ int main(void)
     run_the_status_chip_puts_mute_first();
     run_the_listening_meter_follows_loudness();
     run_the_status_clock_reads_like_a_clock();
+    run_the_glance_page_never_invents_a_reading();
     run_the_muted_face_reads_as_not_listening();
     run_moods_fade_then_the_buddy_dozes_off();
     run_device_state_faces_never_drift();

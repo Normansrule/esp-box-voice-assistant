@@ -365,6 +365,14 @@ static void command_face(const char *argument)
     end_reply();
 }
 
+static void command_glance(const char *argument)
+{
+    (void)argument;
+    ui_screen_face_open_glance();
+    begin_reply("glance", true);
+    end_reply();
+}
+
 static void command_faces(const char *argument)
 {
     (void)argument;
@@ -475,6 +483,7 @@ static const console_command_t s_commands[] = {
     { "say",        command_say,        "say <phrase>" },
     { "face",       command_face,       "face <name>" },
     { "faces",      command_faces,      "faces" },
+    { "glance",     command_glance,     "glance" },
     { "volume",     command_volume,     "volume <0-100>" },
     { "brightness", command_brightness, "brightness <10-100>" },
     { "timer",      command_timer,      "timer <minutes> | timer cancel" },

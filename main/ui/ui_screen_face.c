@@ -21,6 +21,7 @@
 #include "hw_buttons.h"
 #include "hw_display.h"
 #include "ui_screen_face.h"
+#include "ui_glance.h"
 #include "ui_sensor_readout.h"
 #include "ui_settings.h"
 #include "ui_speech_bubble.h"
@@ -90,7 +91,7 @@ static void screen_pressed_cb(lv_event_t *event)
     if (!buddy_settings_get()->touch_antics_enabled) {
         return;
     }
-    if (ui_settings_is_open()) {
+    if (ui_settings_is_open() || ui_glance_is_open()) {
         return;
     }
 
@@ -125,6 +126,27 @@ static void screen_pressed_cb(lv_event_t *event)
         face_animator_play_random_antic();
         ESP_LOGD(TAG, "Poked");
         break;
+    }
+}
+
+/**
+ * @brief A swipe across the face opens the glance page (big clock and readings).
+ *
+ * Left or right only: an up or down drag is more likely a nudge of the box.
+ * LVGL stops a press from also becoming a click once it is a gesture, which is
+ * why the tap handler listens for SHORT_CLICKED rather than PRESSED.
+ */
+static void screen_gesture_cb(lv_event_t *event)
+{
+    (void)event;
+    if (ui_settings_is_open() || ui_glance_is_open()) {
+        return;
+    }
+    const lv_dir_t dir = lv_indev_get_gesture_dir(lv_indev_get_act());
+    if (dir == LV_DIR_LEFT || dir == LV_DIR_RIGHT) {
+        face_animator_notice_activity();
+        ESP_LOGI(TAG, "Swipe: opening glance");
+        ui_glance_open();
     }
 }
 
@@ -164,7 +186,8 @@ esp_err_t ui_screen_face_create(void)
 
     /* Taps anywhere unclaimed reach the screen and make the buddy react. */
     lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(screen, screen_pressed_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(screen, screen_pressed_cb, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_add_event_cb(screen, screen_gesture_cb, LV_EVENT_GESTURE, NULL);
 
     /*
      * Apply the saved preferences INSIDE the lock, before releasing it.
@@ -273,6 +296,16 @@ void ui_screen_face_open_examples(void)
 {
     if (hw_display_lock(500)) {
         ui_settings_open_examples();
+        hw_display_unlock();
+    }
+}
+
+void ui_screen_face_open_glance(void)
+{
+    if (hw_display_lock(500)) {
+        if (!ui_settings_is_open()) {
+            ui_glance_open();
+        }
         hw_display_unlock();
     }
 }
