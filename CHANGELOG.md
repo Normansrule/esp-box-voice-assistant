@@ -8,6 +8,8 @@
 - **Status chip** in the free top-left corner (it docks beside the timer pill when a timer runs). It shows only real state: *Mic off* while the mute switch is on (always wins), a live five-bar microphone meter while listening, *Online* while a home or cloud request is out, and the time once the clock has synced over Wi-Fi. Nothing shows when there is nothing true to say. Switch it (or just the clock) off in `idf.py menuconfig` → Desk Buddy appearance.
 - **Glance page**: swipe the face left or right (or type `glance` in the serial monitor) for a full-screen desk clock: the date, the time in 60 px digits, and tiles for room temperature, humidity and battery (marked as an estimate). Missing readings show "--" with the reason (no dock, no cell, clock not set). A tap, a swipe, the wake word or 20 s alone brings the face back. Its digits are a small Montserrat subset (OFL) generated with lv_font_conv.
 - Taps on the face now react on release (short click) rather than on press, so a swipe no longer also sets off an antic.
+- The status chip no longer raises itself to the front on every refresh, which would have drawn it over the settings, calculator and glance pages.
+- **Simulator**: the status chip and glance page work in the browser too (swipe the screen sideways, press G, or use the Glance page button). The simulator never opens your microphone, so its meter follows a made-up voice while a phrase is said, and its clock is the browser's.
 - The recorder exposes the live microphone peak for the meter (`voice_recorder_get_live_peak()`); the chip's decisions are host-tested.
 - **Untested on device.**
 

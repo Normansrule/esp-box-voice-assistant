@@ -106,7 +106,7 @@
           <button class="mute-switch" id="mute" aria-pressed="false" aria-label="Mute switch (microphone)" title="Mute switch: stops the microphone"></button>
           <span class="device-mic l" aria-hidden="true"></span><span class="device-mic r" aria-hidden="true"></span>
           <div class="device-bezel">
-            <div class="screen dim" id="screen" role="button" tabindex="0" aria-label="Simulated 320 by 240 touchscreen. Activate to poke the face.">
+            <div class="screen dim" id="screen" role="button" tabindex="0" aria-label="Simulated 320 by 240 touchscreen. Activate to poke the face, swipe sideways or press G for the glance page.">
               <canvas id="screen-canvas" width="640" height="480"></canvas>
               <div class="lv-settings" id="lv-settings" role="dialog" aria-label="Simulated settings screen"></div>
             </div>
@@ -132,6 +132,8 @@
 
         <div class="tabpanel" role="tabpanel" id="tab-talk" aria-labelledby="t-talk">
           <button class="btn btn-red wake-btn" id="wake">Say &ldquo;Hi E.S.P.&rdquo;</button>
+          <button class="btn btn-ghost" id="glance" type="button" style="padding:8px 14px;font-size:14px">Glance page</button>
+          <p class="hint">Swipe the screen sideways (or press <kbd>G</kbd>) for the desk clock; tap it to go back. The status chip top-left shows <em>Mic off</em>, a red listening meter, or the time. The simulator never opens your microphone, so the meter moves to a made-up voice, and the clock is your browser's.</p>
           <p class="hint">Then pick what you say. Solid chips answer from fixed replies in <code>voice_local_brain.c</code> and play the matching clip from <code>spiffs/voice/</code>. Dashed chips are answers the device builds at runtime (the time, the temperature, a sum); the simulator shows them as such rather than make one up.</p>
           <input class="search" id="phrase-search" type="search" placeholder="Search <n> offline phrases" aria-label="Search offline phrases">
           <div class="phrases" id="phrases"></div>

@@ -171,7 +171,11 @@ static void poll_cb(lv_timer_t *timer)
     }
 
     place();
-    lv_obj_move_foreground(s_chip);
+    /*
+     * No lv_obj_move_foreground() here: the chip is created after the face,
+     * so it already draws above it, and raising it every poll would put it on
+     * top of the settings, calculator and glance pages that open later.
+     */
 }
 
 esp_err_t ui_status_chip_create(lv_obj_t *parent)
