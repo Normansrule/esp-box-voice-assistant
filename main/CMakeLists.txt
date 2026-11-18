@@ -52,6 +52,12 @@ idf_component_register(
         "ui/ui_sensor_readout.c"
         "ui/ui_speech_bubble.c"
         "ui/ui_timer_badge.c"
+        "ui/ui_status_chip.c"
+        "ui/ui_status_logic.c"
+        "ui/ui_glance.c"
+        "ui/ui_glance_logic.c"
+        "ui/font_glance_clock.c"
+        "ui/font_glance_value.c"
         "ui/ui_settings.c"
         "ui/ui_calculator.c"
 

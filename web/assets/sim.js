@@ -30,6 +30,31 @@
   const CAPTION_LINGER_MS = 5000, LISTENING_CAPTION_MS = 8000;
   const LOUDNESS_FULL_SCALE = 5500;     /* hw_speaker.c */
   const CAPTION_FONTS = [16, 14, 12];   /* ui_speech_bubble.c, largest first */
+  const LEVEL_STEPS = [400, 1000, 2500, 6300, 16000];   /* ui_status_logic.c */
+  const BAR_W = 3, BAR_GAP = 2, BAR_MIN_H = 3, BAR_MAX_H = 14;   /* ui_status_chip.c */
+  const GLANCE_TIMEOUT_MS = 20000;      /* UI_GLANCE_TIMEOUT_MS */
+  const GLANCE_TILE_H = 78, GLANCE_TILE_GAP = 8, GLANCE_MARGIN = 12;   /* ui_glance.c */
+  const FONT = (w, px) => `${w} ${px}px Montserrat, Inter, sans-serif`;
+
+  /* ui_status_pick(): mute first, then listening, online, clock, else hidden. */
+  function statusPick(i) {
+    if (i.muted) return "mic off";
+    if (i.listening) return "listening";
+    if (i.online) return "online";
+    if (i.clockValid && i.clockEnabled) return "clock";
+    return "hidden";
+  }
+  /* ui_status_level_bars() */
+  function levelBars(peak) {
+    let n = 0;
+    while (n < LEVEL_STEPS.length && peak >= LEVEL_STEPS[n]) n++;
+    return n;
+  }
+  /* ui_status_format_clock(): 12-hour, no leading zero on the hour. */
+  function formatClock(h, m) {
+    if (!(h >= 0 && h <= 23 && m >= 0 && m <= 59)) return "--:--";
+    return `${h % 12 || 12}:${String(m).padStart(2, "0")}`;
+  }
 
   /* ---------------------------------------------------------------------- */
   /* Screen: one 320x240 panel = face + sensor chip + gear + speech bubble.  */
@@ -44,6 +69,8 @@
       this.chip = null;                /* {temp, hum, batt?} strings or null */
       this.gaze = { x: 0, y: 0 };      /* motion-sensor gaze bias, look units */
       this.brightness = 1;
+      this.status = null;              /* {kind, bars, text} from the status chip port */
+      this.glance = null;              /* {date, clock, tiles:[{value, caption, alert}]} while open */
     }
 
     caption(source, text, ms) {
@@ -93,6 +120,12 @@
       ctx.fillStyle = T.background;
       ctx.fillRect(0, 0, G.BUDDY_SCREEN_WIDTH, G.BUDDY_SCREEN_HEIGHT);
 
+      if (this.glance) {
+        /* ui_glance.c: a full-screen page drawn over the face. */
+        this.drawGlance(ctx);
+        this.dim(ctx);
+        return;
+      }
       if (this.bubble && now > this.bubble.until) this.hideCaption();
       let pose = this.anim.tick(now);
       if (this.gaze.x || this.gaze.y) {
@@ -104,8 +137,13 @@
       if (this.opts.chrome) {
         this.drawGear(ctx);
         if (this.chip) this.drawChip(ctx);
+        if (this.status && this.status.kind !== "hidden") this.drawStatus(ctx);
         if (this.bubble) this.drawBubble(ctx);
       }
+      this.dim(ctx);
+    }
+
+    dim(ctx) {
       if (this.brightness < 1) {
         ctx.fillStyle = `rgba(0,0,0,${Math.pow(1 - this.brightness, 1.5) * 0.9})`;
         ctx.fillRect(0, 0, G.BUDDY_SCREEN_WIDTH, G.BUDDY_SCREEN_HEIGHT);
@@ -160,6 +198,80 @@
         ctx.fillRect(bx + 2, by + 2, Math.round(12 * bt.level), 6);
         ctx.fillText(bt.text, bx + 22, y + h / 2 + 1);
       }
+    }
+
+    /* ui_status_chip.c: top-left pill, same family as the sensor chip. */
+    drawStatus(ctx) {
+      const s = this.status, h = 25, x = EDGE, y = EDGE;
+      ctx.textBaseline = "middle";
+      if (s.kind === "listening") {
+        const mw = 5 * BAR_W + 4 * BAR_GAP, w = mw + 18;
+        this.pill(ctx, x, y, w, h, 12, T.accent || T.espressif_red);
+        ctx.fillStyle = T.on_accent || "#fff";
+        for (let i = 0; i < 5; i++) {
+          const on = i < s.bars;
+          const bh = on ? BAR_MIN_H + Math.trunc(((BAR_MAX_H - BAR_MIN_H) * (i + 1)) / 5) : BAR_MIN_H;
+          ctx.globalAlpha = on ? 1 : 0.4;
+          ctx.beginPath();
+          ctx.roundRect(x + 9 + i * (BAR_W + BAR_GAP), y + h - 6 - bh, BAR_W, bh, 1);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        return;
+      }
+      ctx.font = FONT(600, 14);
+      const icon = s.kind === "mic off" || s.kind === "online" ? 16 : 0;
+      const label = s.kind === "mic off" ? "Mic off" : s.kind === "online" ? "Online" : s.text;
+      const w = Math.ceil(ctx.measureText(label).width + icon + 18);
+      this.pill(ctx, x, y, w, h, 12, T.surface);
+      const col = s.kind === "online" ? (T.accent || T.espressif_red) : s.kind === "clock" ? T.text : T.text_muted;
+      ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+      const ix = x + 9, cy = y + h / 2;
+      if (s.kind === "mic off") {
+        /* LV_SYMBOL_MUTE: a speaker with a cross. */
+        ctx.beginPath();
+        ctx.moveTo(ix, cy - 2); ctx.lineTo(ix + 3, cy - 2); ctx.lineTo(ix + 6, cy - 5);
+        ctx.lineTo(ix + 6, cy + 5); ctx.lineTo(ix + 3, cy + 2); ctx.lineTo(ix, cy + 2); ctx.closePath(); ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(ix + 8, cy - 3); ctx.lineTo(ix + 12, cy + 3); ctx.moveTo(ix + 12, cy - 3); ctx.lineTo(ix + 8, cy + 3);
+        ctx.stroke();
+      } else if (s.kind === "online") {
+        /* LV_SYMBOL_UPLOAD: an arrow up out of a tray. */
+        ctx.beginPath();
+        ctx.moveTo(ix + 6, cy + 3); ctx.lineTo(ix + 6, cy - 6); ctx.moveTo(ix + 2, cy - 2); ctx.lineTo(ix + 6, cy - 6);
+        ctx.lineTo(ix + 10, cy - 2); ctx.moveTo(ix, cy + 3); ctx.lineTo(ix, cy + 6); ctx.lineTo(ix + 12, cy + 6);
+        ctx.lineTo(ix + 12, cy + 3);
+        ctx.stroke();
+      }
+      ctx.fillText(label, ix + icon, cy + 1);
+    }
+
+    /* ui_glance.c layout: date, big clock, three reading tiles. */
+    drawGlance(ctx) {
+      const W = G.BUDDY_SCREEN_WIDTH, H = G.BUDDY_SCREEN_HEIGHT, g = this.glance;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = T.text_muted;
+      ctx.font = FONT(500, 16);
+      ctx.fillText(g.date, W / 2, 16);
+      ctx.fillStyle = T.text;
+      ctx.font = FONT(500, 60);
+      ctx.fillText(g.clock, W / 2, 50);
+      const tw = (W - 2 * GLANCE_MARGIN - 2 * GLANCE_TILE_GAP) / 3;
+      const ty = H - GLANCE_MARGIN - GLANCE_TILE_H;
+      g.tiles.forEach((t, i) => {
+        const tx = GLANCE_MARGIN + i * (tw + GLANCE_TILE_GAP);
+        this.pill(ctx, tx, ty, tw, GLANCE_TILE_H, 14, T.surface);
+        ctx.textBaseline = "top";
+        ctx.fillStyle = T.text;
+        ctx.font = FONT(500, 28);
+        ctx.fillText(t.value, tx + tw / 2, ty + 12);
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = t.alert ? (T.accent || T.espressif_red) : T.text_muted;
+        ctx.font = FONT(500, 12);
+        ctx.fillText(t.caption, tx + tw / 2, ty + GLANCE_TILE_H - 12);
+      });
+      ctx.textAlign = "left";
     }
 
     drawBubble(ctx) {
@@ -286,6 +398,76 @@
     const pct = batteryPercent(sensors.battMv);
     device.chip = { temp: t, hum: Math.trunc(sensors.hum + 0.5) + "%",
       batt: { text: "~" + pct + "%", level: pct / 100, low: sensors.battMv < G.BUDDY_BATTERY_LOW_MV } };
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Status chip (ui_status_chip.c poll_cb, every 100 ms)                    */
+  /* ---------------------------------------------------------------------- */
+  /* The simulator never opens your microphone, so the meter is fed a made-up
+   * "voice" only while a phrase is being said, and a quiet room otherwise. */
+  let voiceUntil = 0;
+  let shownStatus = null;
+  function pollStatus() {
+    const now = new Date();
+    const kind = statusPick({
+      muted,
+      listening: state === "listening",
+      online: false,                   /* the simulator never calls a cloud */
+      clockValid: true,                /* the browser's clock stands in for SNTP */
+      clockEnabled: true,
+    });
+    if (kind !== shownStatus) {
+      log(`ui_status: Status chip: ${kind}`);
+      shownStatus = kind;
+    }
+    const talking = performance.now() < voiceUntil;
+    const peak = talking ? 900 + Math.random() * 12000 : 150 + Math.random() * 150;
+    device.status = { kind, bars: levelBars(peak), text: formatClock(now.getHours(), now.getMinutes()) };
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Glance page (ui_glance.c + ui_glance_logic.c)                           */
+  /* ---------------------------------------------------------------------- */
+  let glanceTimer = null, glanceOpenedAt = 0, bubbleWasUp = false;
+  function glanceTiles() {
+    const t = !sensors.dock ? { value: "--", caption: "Room temp" } : {
+      value: (settings.fahrenheit ? Math.round(sensors.temp * 9 / 5 + 32) + "°F" : Math.round(sensors.temp) + "°C"),
+      caption: "Room temp" };
+    const h = !sensors.dock ? { value: "--", caption: "Humidity" }
+      : { value: Math.max(0, Math.min(100, Math.round(sensors.hum))) + "%", caption: "Humidity" };
+    const low = sensors.battMv < G.BUDDY_BATTERY_LOW_MV;
+    const b = !sensors.dock ? { value: "--", caption: "No dock" }
+      : { value: "~" + batteryPercent(sensors.battMv) + "%", caption: low ? "Battery low" : "Battery est.", alert: low };
+    return [t, h, b];
+  }
+  function glanceTick() {
+    if (!device.glance) return;
+    if (state === "listening") { log("ui_glance: Wake word: back to the face"); closeGlance(); return; }
+    /* Anything the buddy says brings the face back (only a new caption counts). */
+    const up = !!device.bubble;
+    if (up && !bubbleWasUp) { log("ui_glance: Buddy spoke: back to the face"); closeGlance(); return; }
+    bubbleWasUp = up;
+    if (performance.now() - glanceOpenedAt >= GLANCE_TIMEOUT_MS) { log("ui_glance: Glance timed out"); closeGlance(); return; }
+    const d = new Date();
+    device.glance = {
+      date: d.toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "long" }).replace(",", ""),
+      clock: formatClock(d.getHours(), d.getMinutes()),
+      tiles: glanceTiles(),
+    };
+  }
+  function openGlance(why) {
+    if (device.glance || lv.classList.contains("open")) return;
+    if (why) log(why);
+    glanceOpenedAt = performance.now();
+    bubbleWasUp = !!device.bubble;
+    device.glance = { date: "", clock: "", tiles: [] };
+    glanceTick();
+    log("ui_glance: Glance opened (clock synced)");
+    glanceTimer = setInterval(glanceTick, 500);
+  }
+  function closeGlance() {
+    clearInterval(glanceTimer);
+    device.glance = null;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -492,9 +674,11 @@
     if (busy) return;
     if (state !== "listening") {
       if (!wake()) return;
-      await wait(900);
+      await wait(500);
     }
     busy = true;
+    voiceUntil = performance.now() + 900;   /* the simulated voice drives the meter */
+    await wait(900);
     clearTimeout(listenTimer);
     setState("recognizing");
     log(`multinet: command "${cmd.phrase}" (action ${cmd.action})`, "ok");
@@ -556,9 +740,26 @@
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  /* ui_screen_face.c screen_gesture_cb: a left or right swipe opens the glance page. */
+  let swiped = false, downAt = null;
+  function onPointerDown(ev) { downAt = { x: ev.clientX, y: ev.clientY }; }
+  function onPointerUp(ev) {
+    if (!downAt) return;
+    const r = screenCanvas.getBoundingClientRect();
+    const dx = (ev.clientX - downAt.x) / r.width * 320, dy = (ev.clientY - downAt.y) / r.height * 240;
+    downAt = null;
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+    swiped = true;                      /* LV_EVENT_GESTURE: no tap follows */
+    setTimeout(() => { swiped = false; }, 400);
+    if (device.glance) { log("ui_glance: Glance closed by touch"); closeGlance(); return; }
+    openGlance("ui_face: Swipe: opening glance");
+  }
+
   /* Touch: the gear opens settings, anywhere else gets a random antic. */
   function onScreenTap(ev) {
     audio.ensure();
+    if (swiped) { swiped = false; return; }
+    if (device.glance) { log("ui_glance: Glance closed by touch"); closeGlance(); return; }
     const r = screenCanvas.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width * 320;
     const y = (ev.clientY - r.top) / r.height * 240;
@@ -847,10 +1048,18 @@
     });
     const scr = $("#screen");
     screenCanvas.addEventListener("click", onScreenTap);
+    screenCanvas.addEventListener("pointerdown", onPointerDown);
+    screenCanvas.addEventListener("pointerup", onPointerUp);
+    screenCanvas.addEventListener("pointercancel", () => { downAt = null; });
+    const gl = $("#glance");
+    if (gl) gl.addEventListener("click", () => openGlance("buddy_console: glance"));
+    setInterval(pollStatus, 100);
+    pollStatus();
     scr.addEventListener("keydown", (e) => {
       if (e.target !== scr) return;
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onScreenTap({}); }
       if (e.key.toLowerCase() === "s") openSettings();
+      if (e.key.toLowerCase() === "g") { if (device.glance) closeGlance(); else openGlance("ui_face: Swipe: opening glance"); }
     });
     window.addEventListener("resize", scaleSettings);
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && lv.classList.contains("open")) closeSettings(); });

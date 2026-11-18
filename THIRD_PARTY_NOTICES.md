@@ -8,6 +8,7 @@ The project's own code, tools, site and audio are Unlicense OR CC0-1.0 (see [LIC
 | --- | --- | --- |
 | `components/bsp/` | [espressif/esp-box](https://github.com/espressif/esp-box) board support | Apache-2.0 ([LICENSE](components/bsp/LICENSE)) |
 | `components/espressif__esp-box-3/` | [espressif/esp-bsp](https://github.com/espressif/esp-bsp/tree/master/bsp/esp-box-3) `esp-box-3` 1.1.3, **modified** (see [DESK_BUDDY_PATCHES.md](components/espressif__esp-box-3/DESK_BUDDY_PATCHES.md)) | Apache-2.0 ([LICENSE](components/espressif__esp-box-3/LICENSE)) |
+| `main/ui/font_glance_clock.c`, `main/ui/font_glance_value.c` | Digits subset of **Montserrat Medium** (Copyright 2011 The Montserrat Project Authors, the copy shipped in LVGL's `scripts/built_in_font/`), rasterised with [lv_font_conv](https://github.com/lvgl/lv_font_conv) (MIT) | SIL Open Font License 1.1 (font); the generated C is a bitmap of the font and keeps that license |
 
 ## Downloaded at build time
 

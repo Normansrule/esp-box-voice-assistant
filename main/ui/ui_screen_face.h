@@ -77,6 +77,13 @@ void ui_screen_face_set_gaze_bias(int16_t look_x, int16_t look_y);
 /** Lock-taking wrapper for face_animator_flash_emotion(). */
 void ui_screen_face_flash_emotion(face_emotion_t emotion, uint16_t hold_ms);
 
+/**
+ * @brief Show the glance page (big clock, date and readings). Thread-safe.
+ *
+ * Does nothing while Settings is open.
+ */
+void ui_screen_face_open_glance(void);
+
 #ifdef __cplusplus
 }
 #endif

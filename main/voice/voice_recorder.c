@@ -81,6 +81,14 @@ static volatile bool s_buffer_in_use;
  */
 static volatile int64_t s_buffer_claimed_us;
 
+/*
+ * Peak of the most recent chunk appended while recording, for the listening
+ * meter on the home screen. Written by the speech task, read by the LVGL task:
+ * a single aligned 16-bit store, so a torn read is impossible and the worst a
+ * race can do is show the previous chunk's level for one frame.
+ */
+static volatile uint16_t s_live_peak;
+
 esp_err_t voice_recorder_init(void)
 {
     if (s_buffer != NULL) {
@@ -114,6 +122,7 @@ void voice_recorder_start(void)
      * measurements now describe this attempt and nothing else.
      */
     s_recorded_samples = 0;
+    s_live_peak = 0;
     voice_speech_gate_reset(&s_gate);
 
     if (s_buffer_in_use) {
@@ -156,6 +165,7 @@ int32_t voice_recorder_get_peak_amplitude(void)
 void voice_recorder_stop(void)
 {
     s_recording = false;
+    s_live_peak = 0;
 
     /*
      * Logged at INFO, not DEBUG, and with the measurements in it. These three
@@ -191,6 +201,17 @@ void voice_recorder_append(const int16_t *samples, size_t sample_count)
     if (!s_recording || s_samples == NULL || samples == NULL || sample_count == 0) {
         return;
     }
+
+    /* The meter reads every chunk, even once the buffer is full. */
+    uint16_t peak = 0;
+    for (size_t i = 0; i < sample_count; i++) {
+        const int32_t v = samples[i];
+        const uint16_t magnitude = (uint16_t)((v < 0) ? ((v == -32768) ? 32767 : -v) : v);
+        if (magnitude > peak) {
+            peak = magnitude;
+        }
+    }
+    s_live_peak = peak;
 
     size_t room = s_capacity_samples - s_recorded_samples;
     if (room == 0) {
@@ -273,4 +294,9 @@ esp_err_t voice_recorder_get_wav(const uint8_t **wav_data, size_t *wav_length)
     *wav_data = s_buffer;
     *wav_length = WAV_HEADER_BYTES + data_bytes;
     return ESP_OK;
+}
+
+uint16_t voice_recorder_get_live_peak(void)
+{
+    return s_recording ? s_live_peak : 0;
 }

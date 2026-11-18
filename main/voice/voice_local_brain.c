@@ -1130,7 +1130,7 @@ static bool answer_action(voice_action_t action, const char *phrase, voice_reply
         break;
 
     case VOICE_ACTION_TELL_JOKE:
-        reply->emotion = FACE_EMOTION_EXCITED;
+        reply->emotion = FACE_EMOTION_LAUGHING;
         reply_set_text(reply, "%s", PICK(s_jokes));
         break;
 
@@ -1198,12 +1198,12 @@ static bool answer_action(voice_action_t action, const char *phrase, voice_reply
         break;
 
     case VOICE_ACTION_THANK_YOU:
-        reply->emotion = FACE_EMOTION_LOVE;
+        reply->emotion = FACE_EMOTION_GRATEFUL;
         reply_set_text(reply, "%s", PICK(s_thanks_answers));
         break;
 
     case VOICE_ACTION_COMPLIMENT:
-        reply->emotion = FACE_EMOTION_SHY;
+        reply->emotion = FACE_EMOTION_EMBARRASSED;
         reply_set_text(reply, "%s", PICK(s_compliment_answers));
         break;
 
