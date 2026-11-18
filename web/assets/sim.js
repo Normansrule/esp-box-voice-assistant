@@ -428,7 +428,7 @@
   /* ---------------------------------------------------------------------- */
   /* Glance page (ui_glance.c + ui_glance_logic.c)                           */
   /* ---------------------------------------------------------------------- */
-  let glanceTimer = null, glanceOpenedAt = 0;
+  let glanceTimer = null, glanceOpenedAt = 0, bubbleWasUp = false;
   function glanceTiles() {
     const t = !sensors.dock ? { value: "--", caption: "Room temp" } : {
       value: (settings.fahrenheit ? Math.round(sensors.temp * 9 / 5 + 32) + "°F" : Math.round(sensors.temp) + "°C"),
@@ -443,6 +443,10 @@
   function glanceTick() {
     if (!device.glance) return;
     if (state === "listening") { log("ui_glance: Wake word: back to the face"); closeGlance(); return; }
+    /* Anything the buddy says brings the face back (only a new caption counts). */
+    const up = !!device.bubble;
+    if (up && !bubbleWasUp) { log("ui_glance: Buddy spoke: back to the face"); closeGlance(); return; }
+    bubbleWasUp = up;
     if (performance.now() - glanceOpenedAt >= GLANCE_TIMEOUT_MS) { log("ui_glance: Glance timed out"); closeGlance(); return; }
     const d = new Date();
     device.glance = {
@@ -455,6 +459,7 @@
     if (device.glance || lv.classList.contains("open")) return;
     if (why) log(why);
     glanceOpenedAt = performance.now();
+    bubbleWasUp = !!device.bubble;
     device.glance = { date: "", clock: "", tiles: [] };
     glanceTick();
     log("ui_glance: Glance opened (clock synced)");

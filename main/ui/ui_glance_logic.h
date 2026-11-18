@@ -40,6 +40,12 @@ void ui_glance_humidity(bool valid, float percent, ui_glance_tile_t *out);
 void ui_glance_battery(bool available, bool cell_detected, uint8_t percent_est,
                        bool low, ui_glance_tile_t *out);
 
+/**
+ * The line under the clock while a kitchen timer runs: "Timer 4:32".
+ * Empty when no timer is running, so the page shows nothing it cannot back up.
+ */
+void ui_glance_timer_line(bool running, uint32_t seconds_left, char *out, size_t out_len);
+
 #ifdef __cplusplus
 }
 #endif

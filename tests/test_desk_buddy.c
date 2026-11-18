@@ -556,6 +556,30 @@ TEST(the_glance_page_never_invents_a_reading)
     }
 }
 
+TEST(the_glance_timer_line_matches_the_pill)
+{
+    char line[24];
+
+    ui_glance_timer_line(false, 120, line, sizeof(line));
+    CHECK(line[0] == '\0');                    /* No timer: nothing drawn. */
+    ui_glance_timer_line(true, 272, line, sizeof(line));
+    CHECK_MSG(strcmp(line, "Timer 4:32") == 0, "got %s", line);
+    ui_glance_timer_line(true, 5, line, sizeof(line));
+    CHECK_MSG(strcmp(line, "Timer 0:05") == 0, "got %s", line);
+    ui_glance_timer_line(true, 99 * 60, line, sizeof(line));
+    CHECK_MSG(strcmp(line, "Timer 99:00") == 0, "got %s", line);
+
+    char pill[16];
+    buddy_timer_format_clock(272, pill, sizeof(pill));
+    CHECK(strstr(line, pill) == NULL);          /* (different value above) */
+    ui_glance_timer_line(true, 272, line, sizeof(line));
+    CHECK(strstr(line, pill) != NULL);          /* Same digits as the timer pill. */
+
+    char tiny[4];
+    ui_glance_timer_line(true, 272, tiny, sizeof(tiny));
+    CHECK(strlen(tiny) == 3);                    /* Truncated, still terminated. */
+}
+
 TEST(the_muted_face_reads_as_not_listening)
 {
     const face_pose_t *muted = face_emotion_get_pose(FACE_EMOTION_MUTED);
@@ -3245,6 +3269,7 @@ int main(void)
     run_the_listening_meter_follows_loudness();
     run_the_status_clock_reads_like_a_clock();
     run_the_glance_page_never_invents_a_reading();
+    run_the_glance_timer_line_matches_the_pill();
     run_the_muted_face_reads_as_not_listening();
     run_moods_fade_then_the_buddy_dozes_off();
     run_device_state_faces_never_drift();

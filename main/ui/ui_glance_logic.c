@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include "buddy_timer.h"
 #include "ui_glance_logic.h"
 
 static int round_to_int(float value)
@@ -65,4 +66,18 @@ void ui_glance_battery(bool available, bool cell_detected, uint8_t percent_est,
     const unsigned pct = (percent_est > 100) ? 100u : percent_est;
     snprintf(out->value, sizeof(out->value), "~%u%%", pct);
     snprintf(out->caption, sizeof(out->caption), low ? "Battery low" : "Battery est.");
+}
+
+void ui_glance_timer_line(bool running, uint32_t seconds_left, char *out, size_t out_len)
+{
+    if (out == NULL || out_len == 0) {
+        return;
+    }
+    if (!running) {
+        out[0] = '\0';
+        return;
+    }
+    char clock[16];
+    buddy_timer_format_clock(seconds_left, clock, sizeof(clock));   /* Same m:ss as the pill. */
+    snprintf(out, out_len, "Timer %s", clock);
 }

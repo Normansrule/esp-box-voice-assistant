@@ -114,8 +114,12 @@ void ui_timer_badge_update(uint32_t seconds_left, bool running)
                                 urgent ? FACE_COLOR_ON_ACCENT : FACE_COLOR_TEXT_MUTED,
                                 LV_PART_MAIN);
 
+    /*
+     * No lv_obj_move_foreground(): the pill is created after the face, so it
+     * is already above it, and raising it every second would put it on top
+     * of the settings, calculator and glance pages.
+     */
     lv_obj_clear_flag(s_badge, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_move_foreground(s_badge);
 
     hw_display_unlock();
 }

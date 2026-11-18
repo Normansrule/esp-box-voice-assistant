@@ -8,6 +8,8 @@
  * rectangle: no images, no shadows, no layer buffers.
  */
 
+#include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "esp_log.h"
@@ -15,6 +17,7 @@
 
 #include "buddy_config.h"
 #include "buddy_settings.h"
+#include "buddy_timer.h"
 #include "face_theme.h"
 #include "hw_battery.h"
 #include "hw_sensors.h"
@@ -22,6 +25,7 @@
 #include "net_time.h"
 #include "ui_glance.h"
 #include "ui_glance_logic.h"
+#include "ui_speech_bubble.h"
 #include "ui_status_logic.h"
 #include "voice_wakeword.h"
 
@@ -47,6 +51,9 @@ static const char *TAG = "ui_glance";
 static lv_obj_t   *s_page;
 static lv_obj_t   *s_date;
 static lv_obj_t   *s_clock;
+static lv_obj_t   *s_timer;
+static char        s_timer_text[24];
+static bool        s_bubble_was_visible;
 static lv_obj_t   *s_tile_value[TILE_COUNT];
 static lv_obj_t   *s_tile_caption[TILE_COUNT];
 static lv_timer_t *s_tick;
@@ -83,6 +90,18 @@ static void refresh_clock(void)
         text[0] = '\0';
     }
     lv_label_set_text(s_date, text);
+}
+
+/** The running timer under the clock; the label is only touched when it changes. */
+static void refresh_timer(void)
+{
+    char text[sizeof(s_timer_text)];
+    ui_glance_timer_line(buddy_timer_is_running(), buddy_timer_seconds_remaining(),
+                         text, sizeof(text));
+    if (strcmp(text, s_timer_text) != 0) {
+        snprintf(s_timer_text, sizeof(s_timer_text), "%s", text);
+        lv_label_set_text(s_timer, s_timer_text);
+    }
 }
 
 static void show_tile(int index, const ui_glance_tile_t *tile)
@@ -128,6 +147,19 @@ static void tick_cb(lv_timer_t *timer)
         return;
     }
 
+    /*
+     * Anything the buddy says (a timer ending, low battery, someone arriving)
+     * brings the face back, so the reaction is seen rather than covered. Only
+     * a caption that appears while the page is open counts.
+     */
+    const bool bubble = ui_speech_bubble_is_visible();
+    if (bubble && !s_bubble_was_visible) {
+        ESP_LOGI(TAG, "Buddy spoke: back to the face");
+        ui_glance_close();
+        return;
+    }
+    s_bubble_was_visible = bubble;
+
     const int64_t now = esp_timer_get_time();
     if (now - s_opened_us >= (int64_t)UI_GLANCE_TIMEOUT_MS * 1000) {
         ESP_LOGI(TAG, "Glance timed out");
@@ -136,6 +168,7 @@ static void tick_cb(lv_timer_t *timer)
     }
 
     refresh_clock();
+    refresh_timer();
     if (now - s_readings_us >= (int64_t)READINGS_EVERY_MS * 1000) {
         s_readings_us = now;
         refresh_readings();
@@ -187,6 +220,11 @@ void ui_glance_open(void)
     s_clock = make_label(s_page, &font_glance_clock, FACE_COLOR_TEXT);
     lv_obj_align(s_clock, LV_ALIGN_TOP_MID, 0, 50);
 
+    /* A running timer sits in the gap between the clock and the tiles. */
+    s_timer = make_label(s_page, &lv_font_montserrat_16, FACE_COLOR_ACCENT);
+    lv_obj_align(s_timer, LV_ALIGN_TOP_MID, 0, 120);
+    s_timer_text[0] = '\0';
+
     /* Three tiles along the bottom, same surface and radius as the chips. */
     const lv_coord_t tile_w =
         (BUDDY_SCREEN_WIDTH - 2 * SIDE_MARGIN - (TILE_COUNT - 1) * TILE_GAP) / TILE_COUNT;
@@ -216,6 +254,8 @@ void ui_glance_open(void)
     s_shown_minute = -2;
     refresh_clock();
     refresh_readings();
+    refresh_timer();
+    s_bubble_was_visible = ui_speech_bubble_is_visible();
 
     s_tick = lv_timer_create(tick_cb, TICK_MS, NULL);
     ESP_LOGI(TAG, "Glance opened (clock %s)",
